@@ -1,0 +1,71 @@
+# Complete .gitignore file for Android project
+@"
+# Built application files
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Java class files
+*.class
+
+# Generated files
+bin/
+gen/
+out/
+
+# Gradle files
+.gradle/
+build/
+*/build/
+gradle/caches/
+gradle/wrapper/gradle-wrapper.jar
+
+# Gradle wrapper downloads
+wrapper/
+wrapper/dists/
+
+# Gradle daemon, caches, JDKs
+caches/
+daemon/
+jdks/
+native/
+
+# Local configuration
+local.properties
+
+# Android Studio / IntelliJ IDEA
+.idea/
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/gradle.xml
+.idea/assetWizardSettings.xml
+.idea/dictionaries
+.idea/libraries/
+.idea/caches/
+.idea/modules.xml
+.idea/.name
+*.iml
+.kotlin/
+
+# External native build
+.externalNativeBuild/
+.cxx/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Captures folder
+captures/
+
+# Log files
+*.log
+
+# Keystore files (IMPORTANT - never commit!)
+*.jks
+*.keystore
+
+# Android Profiling
+*.hprof
+"@ | Out-File -FilePath .gitignore -Encoding UTF8 -Force

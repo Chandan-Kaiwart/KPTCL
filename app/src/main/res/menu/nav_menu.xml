@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <!-- Home Section -->
+    <item
+        android:id="@+id/nav_home"
+        android:icon="@drawable/ic_home"
+        android:title="Home"
+        app:iconTint="@color/icon_tint" />
+
+    <!-- Feeder Hourly Parameter Section Header -->
+    <item android:title="FEEDER HOURLY PARAMETER"
+        app:iconTint="@color/black">
+        <menu>
+            <item
+                android:id="@+id/hourlyEntry"
+                android:icon="@drawable/ic_add"
+                android:title="Feeder Hourly Entry"
+                app:iconTint="@color/icon_tint" />
+            <item
+                android:id="@+id/hourlyEdit"
+                android:icon="@drawable/ic_edit"
+                android:title="Feeder Hourly Edit"
+                app:iconTint="@color/icon_tint" />
+            <item
+                android:id="@+id/hourlyView"
+                android:icon="@drawable/ic_view"
+                android:title="Feeder Hourly View"
+                app:iconTint="@color/icon_tint" />
+        </menu>
+    </item>
+
+    <!-- Feeder Daily Performance Section Header -->
+    <item android:title="FEEDER DAILY PERFORMANCE"
+        app:iconTint="@color/black">
+        <menu>
+            <item
+                android:id="@+id/dailyEntry"
+                android:icon="@drawable/ic_add"
+                android:title="Feeder Daily Entry"
+                app:iconTint="@color/icon_tint" />
+            <item
+                android:id="@+id/dailyEdit"
+                android:icon="@drawable/ic_edit"
+                android:title="Feeder Daily Edit"
+                app:iconTint="@color/icon_tint" />
+            <item
+                android:id="@+id/dailyView"
+                android:icon="@drawable/ic_view"
+                android:title="Feeder Daily View"
+                app:iconTint="@color/icon_tint" />
+        </menu>
+    </item>
+
+    <!-- Tickets Section Header -->
+    <item android:title="TICKETS"
+        app:iconTint="@color/black">
+        <menu>
+            <item
+                android:id="@+id/createTicket"
+                android:icon="@drawable/ic_add"
+                android:title="Create Ticket"
+                app:iconTint="@color/icon_tint" />
+            <item
+                android:id="@+id/viewTickets"
+                android:icon="@drawable/ic_list"
+                android:title="View Tickets"
+                app:iconTint="@color/icon_tint" />
+        </menu>
+    </item>
+
+    <!-- Logout Section (at bottom) -->
+    <item
+        android:id="@+id/nav_logout"
+        android:icon="@drawable/ic_logout"
+        android:title="LOGOUT"
+        app:iconTint="@color/logout_icon_tint" />
+
+</menu>

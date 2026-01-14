@@ -1,0 +1,51 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.KPTCL" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Primary brand color -->
+        <item name="colorPrimary">#6366F1</item> <!-- Purple for toolbar -->
+        <item name="colorPrimaryVariant">#4F46E5</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+
+        <!-- Secondary brand color -->
+        <item name="colorSecondary">#14B8A6</item> <!-- Teal -->
+        <item name="colorSecondaryVariant">#0D9488</item>
+        <item name="colorOnSecondary">@android:color/white</item>
+
+        <!-- Status bar color -->
+        <item name="android:statusBarColor">#6366F1</item>
+
+        <!-- Window background -->
+        <item name="android:windowBackground">@android:color/white</item>
+
+        <!-- Text colors -->
+        <item name="android:textColorPrimary">#1F2937</item>
+        <item name="android:textColorSecondary">#6B7280</item>
+    </style>
+
+    <style name="Theme.KPTCL" parent="Base.Theme.KPTCL" />
+
+    <!-- Custom DatePicker Theme -->
+    <style name="CustomDatePickerTheme" parent="ThemeOverlay.MaterialComponents.MaterialCalendar">
+        <!-- Background colors -->
+        <item name="colorPrimary">#6366F1</item> <!-- Purple -->
+        <item name="colorPrimaryVariant">#4F46E5</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+
+        <!-- Selected date -->
+        <item name="colorSecondary">#14B8A6</item> <!-- Teal -->
+        <item name="colorSecondaryVariant">#0D9488</item>
+        <item name="colorOnSecondary">@android:color/white</item>
+
+        <!-- Surface and background -->
+        <item name="colorSurface">@android:color/white</item>
+        <item name="colorOnSurface">#1F2937</item> <!-- Dark gray text -->
+
+        <!-- Shape -->
+        <item name="shapeAppearanceMediumComponent">@style/RoundedCorners</item>
+    </style>
+
+    <style name="RoundedCorners" parent="ShapeAppearance.MaterialComponents.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+</resources>

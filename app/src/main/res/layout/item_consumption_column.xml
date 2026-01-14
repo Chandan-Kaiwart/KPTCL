@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@android:color/white"
+    android:padding="1dp">
+
+    <!-- Category - Read Only -->
+    <TextView
+        android:id="@+id/tvCategory"
+        android:layout_width="150dp"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="6dp"
+        android:text="URBAN"
+        android:textColor="@color/black"
+        android:textSize="9sp"
+        android:background="@drawable/table_cell_border" />
+
+    <!-- Remark - Editable -->
+    <EditText
+        android:id="@+id/etRemark"
+        android:layout_width="150dp"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="6dp"
+        android:hint="Remark"
+        android:textSize="9sp"
+        android:textColor="@color/black"
+        android:textColorHint="@color/black"
+        android:inputType="text"
+        android:maxLines="1"
+        android:background="@drawable/table_cell_border_editable" />
+
+    <!-- Total Consumption - Editable -->
+    <EditText
+        android:id="@+id/etTotal"
+        android:layout_width="150dp"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="6dp"
+        android:textColor="@color/black"
+        android:textColorHint="@color/black"
+        android:hint="0.0"
+        android:textSize="9sp"
+        android:inputType="numberDecimal"
+        android:maxLines="1"
+        android:background="@drawable/table_cell_border_editable" />
+
+    <!-- Supply 3PH - Dropdown -->
+    <Spinner
+        android:id="@+id/spinnerSupply3ph"
+        android:layout_width="150dp"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:textColor="@color/black"
+
+        android:textColorHint="@color/black"
+        android:padding="2dp"
+        android:spinnerMode="dropdown"
+        android:background="@drawable/table_cell_border_editable" />
+
+    <!-- Supply 1PH - Dropdown -->
+    <Spinner
+        android:id="@+id/spinnerSupply1ph"
+        android:layout_width="150dp"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:textColor="@color/black"
+        android:textColorHint="@color/black"
+        android:padding="2dp"
+        android:spinnerMode="dropdown"
+        android:background="@drawable/table_cell_border_editable" />
+
+</LinearLayout>

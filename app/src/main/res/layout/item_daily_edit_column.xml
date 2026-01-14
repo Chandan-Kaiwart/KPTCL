@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@android:color/white"
+    android:padding="1dp">
+
+    <!-- Feeder Name -->
+    <TextView
+        android:id="@+id/tvFeeder"
+        android:layout_width="150dp"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="6dp"
+        android:text="F04-RAMANAHALLI"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:textStyle="bold"
+        android:background="@drawable/cell_border" />
+
+    <!-- Code -->
+    <TextView
+        android:id="@+id/tvCode"
+        android:layout_width="150dp"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="6dp"
+        android:text="1210205902020102"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:background="@drawable/cell_border" />
+
+    <!-- Category -->
+    <TextView
+        android:id="@+id/tvCategory"
+        android:layout_width="150dp"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="6dp"
+        android:text="MIXED"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:background="@drawable/cell_border" />
+
+    <!-- Remark -->
+    <EditText
+        android:id="@+id/etRemark"
+        android:layout_width="150dp"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="6dp"
+        android:hint="Remark"
+        android:textColor="#000000"
+        android:textColorHint="#666666"
+        android:textSize="10sp"
+        android:inputType="text"
+        android:background="@drawable/table_cell_border_editable" />
+
+    <!-- Total Consumption -->
+    <EditText
+        android:id="@+id/etTotal"
+        android:layout_width="150dp"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="6dp"
+        android:hint="kWh"
+        android:textColor="#000000"
+        android:textColorHint="#666666"
+        android:textSize="11sp"
+        android:inputType="numberDecimal"
+        android:background="@drawable/table_cell_border_editable" />
+
+    <!-- Supply 3PH (minutes) -->
+    <Spinner
+        android:id="@+id/etSupply3ph"
+        android:layout_width="150dp"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="6dp"
+        android:hint="minutes"
+        android:textColor="#000000"
+        android:textColorHint="#666666"
+        android:textSize="10sp"
+        android:inputType="number"
+        android:background="@drawable/table_cell_border_editable" />
+
+    <!-- Supply 1PH (minutes) -->
+    <Spinner
+        android:id="@+id/etSupply1ph"
+        android:layout_width="150dp"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="6dp"
+        android:hint="minutes"
+        android:textColor="#000000"
+        android:textColorHint="#666666"
+        android:textSize="10sp"
+        android:inputType="number"
+        android:background="@drawable/table_cell_border_editable" />
+
+</LinearLayout>

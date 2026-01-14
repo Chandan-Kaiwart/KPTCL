@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:background="@color/table_header">
+
+    <!-- Fixed Column: Feeder Name -->
+    <TextView
+        android:layout_width="150dp"
+        android:layout_height="50dp"
+        android:text="FEEDER NAME"
+        android:gravity="center"
+        android:textStyle="bold"
+        android:textSize="11sp"
+        android:textColor="#000000"
+        android:padding="8dp"
+        android:background="@drawable/cell_border" />
+
+    <!-- Scrollable Columns -->
+    <HorizontalScrollView
+        android:id="@+id/hsvDailyHeaderParameters"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="120dp"
+                android:layout_height="50dp"
+                android:text="FEEDER CODE"
+                android:gravity="center"
+                android:textStyle="bold"
+                android:textSize="11sp"
+                android:textColor="#000000"
+                android:padding="8dp"
+                android:background="@drawable/cell_border" />
+
+            <TextView
+                android:layout_width="120dp"
+                android:layout_height="50dp"
+                android:text="CATEGORY"
+                android:gravity="center"
+                android:textStyle="bold"
+                android:textSize="11sp"
+                android:textColor="#000000"
+                android:padding="8dp"
+                android:background="@drawable/cell_border" />
+
+            <TextView
+                android:layout_width="120dp"
+                android:layout_height="50dp"
+                android:text="REMARK"
+                android:gravity="center"
+                android:textStyle="bold"
+                android:textSize="11sp"
+                android:textColor="#000000"
+                android:padding="8dp"
+                android:background="@drawable/cell_border" />
+
+            <TextView
+                android:layout_width="120dp"
+                android:layout_height="50dp"
+                android:text="TOTAL (kWh)"
+                android:gravity="center"
+                android:textStyle="bold"
+                android:textSize="11sp"
+                android:textColor="#000000"
+                android:padding="8dp"
+                android:background="@drawable/cell_border" />
+
+            <TextView
+                android:layout_width="120dp"
+                android:layout_height="50dp"
+                android:text="SUPPLY 3PH"
+                android:gravity="center"
+                android:textStyle="bold"
+                android:textSize="11sp"
+                android:textColor="#000000"
+                android:padding="8dp"
+                android:background="@drawable/cell_border" />
+
+            <TextView
+                android:layout_width="120dp"
+                android:layout_height="50dp"
+                android:text="SUPPLY 1PH"
+                android:gravity="center"
+                android:textStyle="bold"
+                android:textSize="11sp"
+                android:textColor="#000000"
+                android:padding="8dp"
+                android:background="@drawable/cell_border" />
+        </LinearLayout>
+    </HorizontalScrollView>
+</LinearLayout>

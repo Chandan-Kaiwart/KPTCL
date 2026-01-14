@@ -1,0 +1,361 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="70dp"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="4dp">
+
+
+    <!-- Parameter Row -->
+    <TextView
+        android:id="@+id/tvParam"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="-"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:textStyle="bold"
+        android:background="#F5F5F5"
+        android:focusable="false"
+        android:clickable="false" />
+
+    <!-- Hour 00 -->
+    <TextView
+        android:id="@+id/etHour00"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="-"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:background="#FFFFFF"
+        android:focusable="false"
+        android:clickable="false" />
+
+    <!-- Hour 01 -->
+    <TextView
+        android:id="@+id/etHour01"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="-"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:background="#F5F5F5"
+        android:focusable="false"
+        android:clickable="false" />
+
+    <!-- Hour 02 -->
+    <TextView
+        android:id="@+id/etHour02"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="-"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:background="#FFFFFF"
+        android:focusable="false"
+        android:clickable="false" />
+
+    <!-- Hour 03 -->
+    <TextView
+        android:id="@+id/etHour03"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="-"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:background="#F5F5F5"
+        android:focusable="false"
+        android:clickable="false" />
+
+    <!-- Hour 04 -->
+    <TextView
+        android:id="@+id/etHour04"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="-"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:background="#FFFFFF"
+        android:focusable="false"
+        android:clickable="false" />
+
+    <!-- Hour 05 -->
+    <TextView
+        android:id="@+id/etHour05"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="-"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:background="#F5F5F5"
+        android:focusable="false"
+        android:clickable="false" />
+
+    <!-- Hour 06 -->
+    <TextView
+        android:id="@+id/etHour06"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="-"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:background="#FFFFFF"
+        android:focusable="false"
+        android:clickable="false" />
+
+    <!-- Hour 07 -->
+    <TextView
+        android:id="@+id/etHour07"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="-"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:background="#F5F5F5"
+        android:focusable="false"
+        android:clickable="false" />
+
+    <!-- Hour 08 -->
+    <TextView
+        android:id="@+id/etHour08"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="-"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:background="#FFFFFF"
+        android:focusable="false"
+        android:clickable="false" />
+
+    <!-- Hour 09 -->
+    <TextView
+        android:id="@+id/etHour09"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="-"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:background="#F5F5F5"
+        android:focusable="false"
+        android:clickable="false" />
+
+    <!-- Hour 10 -->
+    <TextView
+        android:id="@+id/etHour10"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="-"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:background="#FFFFFF"
+        android:focusable="false"
+        android:clickable="false" />
+
+    <!-- Hour 11 -->
+    <TextView
+        android:id="@+id/etHour11"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="-"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:background="#F5F5F5"
+        android:focusable="false"
+        android:clickable="false" />
+
+    <!-- Hour 12 -->
+    <TextView
+        android:id="@+id/etHour12"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="-"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:background="#FFFFFF"
+        android:focusable="false"
+        android:clickable="false" />
+
+    <!-- Hour 13 -->
+    <TextView
+        android:id="@+id/etHour13"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="-"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:background="#F5F5F5"
+        android:focusable="false"
+        android:clickable="false" />
+
+    <!-- Hour 14 -->
+    <TextView
+        android:id="@+id/etHour14"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="-"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:background="#FFFFFF"
+        android:focusable="false"
+        android:clickable="false" />
+
+    <!-- Hour 15 -->
+    <TextView
+        android:id="@+id/etHour15"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="-"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:background="#F5F5F5"
+        android:focusable="false"
+        android:clickable="false" />
+
+    <!-- Hour 16 -->
+    <TextView
+        android:id="@+id/etHour16"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="-"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:background="#FFFFFF"
+        android:focusable="false"
+        android:clickable="false" />
+
+    <!-- Hour 17 -->
+    <TextView
+        android:id="@+id/etHour17"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="-"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:background="#F5F5F5"
+        android:focusable="false"
+        android:clickable="false" />
+
+    <!-- Hour 18 -->
+    <TextView
+        android:id="@+id/etHour18"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="-"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:background="#FFFFFF"
+        android:focusable="false"
+        android:clickable="false" />
+
+    <!-- Hour 19 -->
+    <TextView
+        android:id="@+id/etHour19"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="-"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:background="#F5F5F5"
+        android:focusable="false"
+        android:clickable="false" />
+
+    <!-- Hour 20 -->
+    <TextView
+        android:id="@+id/etHour20"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="-"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:background="#FFFFFF"
+        android:focusable="false"
+        android:clickable="false" />
+
+    <!-- Hour 21 -->
+    <TextView
+        android:id="@+id/etHour21"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="-"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:background="#F5F5F5"
+        android:focusable="false"
+        android:clickable="false" />
+
+    <!-- Hour 22 -->
+    <TextView
+        android:id="@+id/etHour22"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="-"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:background="#FFFFFF"
+        android:focusable="false"
+        android:clickable="false" />
+
+    <!-- Hour 23 -->
+    <TextView
+        android:id="@+id/etHour23"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="-"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:background="#F5F5F5"
+        android:focusable="false"
+        android:clickable="false" />
+
+</LinearLayout>

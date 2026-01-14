@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:background="@android:color/white"
+    android:padding="2dp">
+
+    <!-- Row Label (Hour) -->
+    <TextView
+        android:id="@+id/tvHour"
+        android:layout_width="65dp"
+        android:layout_height="45dp"
+        android:gravity="center"
+        android:text="00"
+        android:textColor="@color/text_primary"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:background="@drawable/input_border"
+        android:padding="4dp" />
+
+    <!-- Parameters ScrollView -->
+    <HorizontalScrollView
+        android:id="@+id/hsvParameters"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="2dp"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <!-- IB (Ampere) -->
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etIR"
+                android:layout_width="65dp"
+                android:layout_height="45dp"
+                android:background="@drawable/input_border"
+                android:gravity="center"
+                android:hint="IR"
+                android:inputType="numberDecimal"
+                android:textSize="10sp"
+                android:layout_marginEnd="2dp" />
+
+            <!-- IR (Ampere) -->
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etIY"
+                android:layout_width="65dp"
+                android:layout_height="45dp"
+                android:background="@drawable/input_border"
+                android:gravity="center"
+                android:hint="IY"
+                android:inputType="numberDecimal"
+                android:textSize="10sp"
+                android:layout_marginEnd="2dp" />
+
+            <!-- IY (Ampere) -->
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etIB"
+                android:layout_width="65dp"
+                android:layout_height="45dp"
+                android:background="@drawable/input_border"
+                android:gravity="center"
+                android:hint="IB"
+                android:inputType="numberDecimal"
+                android:textSize="10sp"
+                android:layout_marginEnd="2dp" />
+
+            <!-- MVAR -->
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etMW"
+                android:layout_width="65dp"
+                android:layout_height="45dp"
+                android:background="@drawable/input_border"
+                android:gravity="center"
+                android:hint="MW"
+                android:inputType="numberDecimal"
+                android:textSize="10sp" />
+            <!-- MW -->
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etMVAR"
+                android:layout_width="65dp"
+                android:layout_height="45dp"
+                android:background="@drawable/input_border"
+                android:gravity="center"
+                android:hint="MVAR"
+                android:inputType="numberDecimal"
+                android:textSize="10sp"
+                android:layout_marginEnd="2dp" />
+
+
+
+        </LinearLayout>
+    </HorizontalScrollView>
+
+</LinearLayout>

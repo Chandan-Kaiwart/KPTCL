@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:background="@android:color/white">
+
+    <!-- Fixed Column: Feeder Name -->
+    <TextView
+        android:id="@+id/tvFeeder"
+        android:layout_width="150dp"
+        android:layout_height="50dp"
+        android:text="F01-VENKATAPUR"
+        android:gravity="center_vertical|start"
+        android:textSize="10sp"
+        android:textColor="#000000"
+        android:textStyle="bold"
+        android:paddingStart="12dp"
+        android:paddingEnd="8dp"
+        android:background="@drawable/cell_border" />
+
+    <!-- Scrollable Columns -->
+    <HorizontalScrollView
+        android:id="@+id/hsvDailyParameters"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <!-- Feeder Code -->
+            <TextView
+                android:id="@+id/tvCode"
+                android:layout_width="120dp"
+                android:layout_height="50dp"
+                android:gravity="center"
+                android:textSize="10sp"
+                android:textColor="#000000"
+                android:hint="Code"
+                android:textColorHint="#757575"
+                android:padding="8dp"
+                android:background="@drawable/input_cell_border" />
+
+            <!-- Category -->
+            <TextView
+                android:id="@+id/tvCategory"
+                android:layout_width="120dp"
+                android:layout_height="50dp"
+                android:gravity="center"
+                android:textSize="10sp"
+                android:textColor="#000000"
+                android:hint="Category"
+                android:textColorHint="#757575"
+                android:padding="8dp"
+                android:background="@drawable/input_cell_border" />
+
+            <!-- Remark -->
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etRemark"
+                android:layout_width="120dp"
+                android:layout_height="50dp"
+                android:gravity="center"
+                android:textSize="10sp"
+                android:textColor="#000000"
+                android:hint="Remark"
+                android:textColorHint="#757575"
+                android:padding="8dp"
+                android:background="@drawable/input_cell_border"
+                android:inputType="text" />
+
+            <!-- Total Consumption -->
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etTotal"
+                android:layout_width="120dp"
+                android:layout_height="50dp"
+                android:gravity="center"
+                android:textSize="10sp"
+                android:textColor="#000000"
+                android:hint="0.00"
+                android:textColorHint="#757575"
+                android:padding="8dp"
+                android:background="@drawable/input_cell_border"
+                android:inputType="numberDecimal" />
+
+            <!-- Supply 3PH - CHANGED TO SPINNER -->
+            <Spinner
+                android:id="@+id/spinnerSupply3ph"
+                android:layout_width="120dp"
+                android:layout_height="50dp"
+                android:minHeight="50dp"
+                android:spinnerMode="dropdown"
+                android:background="@drawable/input_cell_border"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp" />
+
+            <!-- Supply 1PH - CHANGED TO SPINNER -->
+            <Spinner
+                android:id="@+id/spinnerSupply1ph"
+                android:layout_width="120dp"
+                android:layout_height="50dp"
+                android:minHeight="50dp"
+                android:spinnerMode="dropdown"
+                android:background="@drawable/input_cell_border"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp" />
+        </LinearLayout>
+    </HorizontalScrollView>
+</LinearLayout>

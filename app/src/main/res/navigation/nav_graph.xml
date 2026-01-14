@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Place in res/navigation/nav_graph.xml -->
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/loginFragment">
+
+    <fragment
+        android:id="@+id/loginFragment"
+        android:name="com.apc.kptcl.home.LoginFragment"
+        android:label="Login"
+        tools:layout="@layout/fragment_login">
+
+        <action
+            android:id="@+id/action_loginFragment_to_welcomeFragment"
+            app:destination="@id/welcomeFragment" />
+
+        <!-- Add this action -->
+        <action
+            android:id="@+id/action_loginFragment_to_homeFragment"
+            app:destination="@id/homeFragment"
+            app:popUpTo="@id/loginFragment"
+            app:popUpToInclusive="true" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/reportFragment"
+        android:name="com.apc.kptcl.home.DataValidatorFragment"
+        android:label="Report"
+        tools:layout="@layout/fragment_data_validator"
+        />
+
+    <fragment
+        android:id="@+id/welcomeFragment"
+        android:name="com.apc.kptcl.home.WelcomeFragment"
+        android:label="Welcome"
+        tools:layout="@layout/fragment_welcome">
+
+        <argument
+            android:name="username"
+            app:argType="string" />
+        <argument
+            android:name="escom"
+            app:argType="string" />
+        <argument
+            android:name="role"
+            app:argType="string" />
+
+        <action
+            android:id="@+id/action_welcomeFragment_to_homeFragment"
+            app:destination="@id/homeFragment"
+            app:popUpTo="@id/loginFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/dailyParameterEntryFragment"
+        android:name="com.apc.kptcl.home.users.daily.DailyParameterViewFragment"
+        android:label="Daily Parameter View"
+        tools:layout="@layout/fragment_daily_parameter_entry"
+        />
+<fragment
+    android:id="@+id/feederConfirmation"
+    android:name="com.apc.kptcl.home.users.ticket.FeederConfirmationFragment"
+    android:label="Feeder Confirmation"
+    tools:layout="@layout/fragment_feeder_confirmation"
+    >
+    <action
+        android:id="@+id/action_feederConfirmation_to_CreateTicketFragment"
+        app:destination="@id/CreateTicketFragment" />
+</fragment>
+    <fragment
+        android:id="@+id/homeFragment"
+        android:name="com.apc.kptcl.home.HomeFragment"
+        android:label="Home"
+        tools:layout="@layout/fragment_home">
+
+        <action
+            android:id="@+id/action_homeFragment_to_CreateTicketFragment"
+            app:destination="@id/CreateTicketFragment" />
+        <action
+            android:id="@+id/action_homeFragment_to_consumptionEntryFragment"
+            app:destination="@id/consumptionEntryFragment" />
+        <action
+            android:id="@+id/action_homeFragment_to_elogEntryFragment"
+            app:destination="@id/elogEntryFragment" />
+        <action
+            android:id="@+id/action_homeFragment_to_feederViewFragment"
+            app:destination="@id/feederViewFragment" />
+        <action
+            android:id="@+id/action_homeFragment_to_feederEditFragment"
+            app:destination="@id/feederEditFragment" />
+        <action
+            android:id="@+id/action_homeFragment_to_viewTicketsFragment"
+            app:destination="@id/viewTicketsFragment" />
+        <action
+            android:id="@+id/action_homeFragment_to_feederHourlyEntryFragment"
+            app:destination="@id/feederHourlyEntryFragment" />
+        <action
+            android:id="@+id/action_homeFragment_to_feederConfirmation"
+            app:destination="@id/feederConfirmation" />
+        <action
+            android:id="@+id/action_homeFragment_to_dailyParameterEntryFragment"
+            app:destination="@id/dailyParameterEntryFragment" />
+        <action
+            android:id="@+id/action_homeFragment_to_reportFragment"
+            app:destination="@id/reportFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/consumptionEntryFragment"
+        android:name="com.apc.kptcl.home.users.daily.ConsumptionEntryFragment"
+        android:label="Daily Consumption Entry"
+        tools:layout="@layout/fragment_consumption_entry"
+        />
+
+    <fragment
+        android:id="@+id/viewTicketsFragment"
+        android:name="com.apc.kptcl.home.users.ticket.ViewTicketsFragment"
+        android:label="Tickets"
+        tools:layout="@layout/fragment_view_tickets"
+        >
+        <action
+            android:id="@+id/action_viewTicketsFragment_to_CreateTicketFragment"
+            app:destination="@id/CreateTicketFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/CreateTicketFragment"
+        android:name="com.apc.kptcl.home.users.ticket.CreateTicketFragment"
+        android:label="Raise Ticket"
+        tools:layout="@layout/fragment_create_ticket"
+        >
+        <action
+            android:id="@+id/action_CreateTicketFragment_to_viewTicketsFragment"
+            app:destination="@id/viewTicketsFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/elogEntryFragment"
+        android:name="com.apc.kptcl.home.users.daily.DailyEditFragment"
+        android:label="Daily Edit"
+        tools:layout="@layout/fragment_elog_entry"
+        />
+
+    <fragment
+        android:id="@+id/feederViewFragment"
+        android:name="com.apc.kptcl.home.users.hourly.FeederViewFragment"
+        android:label="Feeder Hourly View"
+        tools:layout="@layout/fragment_feeder_view"
+        >
+        <action
+            android:id="@+id/action_feederViewFragment_to_feederEditFragment"
+            app:destination="@id/feederEditFragment" />
+        <action
+            android:id="@+id/action_feederViewFragment_to_elogEntryFragment"
+            app:destination="@id/elogEntryFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/feederEditFragment"
+        android:name="com.apc.kptcl.home.users.hourly.FeederEditFragment"
+        android:label="Feeder Hourly Edit"
+        tools:layout="@layout/fragment_feeder_edit"
+        >
+        <action
+            android:id="@+id/action_feederEditFragment_to_feederViewFragment"
+            app:destination="@id/feederViewFragment" />
+        <action
+            android:id="@+id/action_feederEditFragment_to_elogEntryFragment"
+            app:destination="@id/elogEntryFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/feederHourlyEntryFragment"
+        android:name="com.apc.kptcl.home.users.hourly.FeederHourlyEntryFragment"
+        android:label="Feeder Hourly Entry"
+        tools:layout="@layout/fragment_feeder_hourly_entry"
+        />
+
+</navigation>
