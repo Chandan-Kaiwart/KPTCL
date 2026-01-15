@@ -107,11 +107,6 @@ class DailyEditFragment : Fragment() {
             calendar.get(Calendar.DAY_OF_MONTH)
         )
 
-        // ✅ SAME DAY EDIT RESTRICTION: Only allow yesterday and before
-        val yesterdayCalendar = Calendar.getInstance()
-        yesterdayCalendar.add(Calendar.DAY_OF_YEAR, -1)
-        datePickerDialog.datePicker.maxDate = yesterdayCalendar.timeInMillis
-
         datePickerDialog.show()
     }
 

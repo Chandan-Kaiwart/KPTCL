@@ -169,23 +169,23 @@ class MainActivity : AppCompatActivity() {
                 }
                 R.id.createTicket -> {
 
-//                    navController.navigate(R.id.CreateTicketFragment, null,
-//                        navOptions {
-//
-//                            popUpTo(R.id.homeFragment) {
-//                                inclusive = false
-//                            }
-//                        })
+                    navController.navigate(R.id.CreateTicketFragment, null,
+                        navOptions {
+
+                            popUpTo(R.id.homeFragment) {
+                                inclusive = false
+                            }
+                        })
                     Toast.makeText(this, "This feature will come soon", Toast.LENGTH_LONG).show()
 
                 }
                 R.id.viewTickets -> {
-//                    navController.navigate(R.id.viewTicketsFragment, null,
-//                        navOptions {
-//                            popUpTo(R.id.homeFragment) {
-//                                inclusive = false
-//                            }
-//                        })
+                    navController.navigate(R.id.viewTicketsFragment, null,
+                        navOptions {
+                            popUpTo(R.id.homeFragment) {
+                                inclusive = false
+                            }
+                        })
                     Toast.makeText(this, "This feature will come soon", Toast.LENGTH_LONG).show()
 
                 }

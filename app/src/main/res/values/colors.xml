@@ -97,5 +97,5 @@
     <!-- Menu Colors -->
     <color name="menu_item_text">#1F2937</color>
     <color name="menu_divider">#E5E7EB</color>
-
+    <color name="divider">#E0E0E0</color>
 </resources>

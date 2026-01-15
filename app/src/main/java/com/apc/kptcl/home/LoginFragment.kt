@@ -40,8 +40,7 @@ class LoginFragment : Fragment() {
         "HESCOM",
         "GESCOM",
         "MESCOM",
-        "CESC",
-        "KPTCL"
+        "CESC"
     )
 
     companion object {

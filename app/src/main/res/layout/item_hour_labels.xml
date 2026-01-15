@@ -18,17 +18,7 @@
         android:textStyle="bold"
         android:background="#BDBDBD" />
 
-    <!-- Hour 00 -->
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:gravity="center"
-        android:padding="4dp"
-        android:text="00"
-        android:textColor="#000000"
-        android:textSize="10sp"
-        android:textStyle="bold"
-        android:background="#FFFFFF" />
+
 
     <!-- Hour 01 -->
     <TextView
@@ -266,5 +256,15 @@
         android:textStyle="bold"
         android:background="#FFFFFF" />
 
-
+    <!-- Hour 00 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="24"
+        android:textColor="#000000"
+        android:textSize="10sp"
+        android:textStyle="bold"
+        android:background="#FFFFFF" />
 </LinearLayout>

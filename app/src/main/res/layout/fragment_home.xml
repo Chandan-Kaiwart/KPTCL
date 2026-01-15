@@ -1,196 +1,229 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:fillViewport="true"
     android:background="@color/background_light"
     tools:context=".home.HomeFragment">
 
-    <!-- Main Content Card -->
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/mainCard"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="4dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
 
-        <LinearLayout
-            android:layout_width="match_parent"
+        <!-- Main Content Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/mainCard"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:background="#BBDEFB"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:layout_margin="16dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
 
-            <!-- Title -->
-            <TextView
-                android:id="@+id/tvTitle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="FEEDER DATA ENTRY FOR 33/11 KV"
-                android:textAlignment="center"
-                android:textColor="@color/text_primary"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:paddingBottom="8dp" />
-
-
-
-            <!-- Divider -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/divider_color"
-                android:layout_marginBottom="16dp" />
-
-            <!-- Info Section -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:background="#BBDEFB"
+                android:orientation="vertical"
+                android:padding="16dp">
 
-                <!-- 🆕 Username from Token -->
+                <!-- Title -->
                 <TextView
-                    android:id="@+id/tvUsername"
+                    android:id="@+id/tvTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="USER: AFZALPUR_110"
+                    android:text="FEEDER DATA ENTRY FOR 33/11 KV"
+                    android:textAlignment="center"
                     android:textColor="@color/text_primary"
-                    android:textSize="14sp"
+                    android:textSize="18sp"
                     android:textStyle="bold"
-                    android:paddingBottom="4dp" />
+                    android:paddingBottom="8dp" />
 
-                <!-- 🆕 Role from Token -->
-                <TextView
-                    android:id="@+id/tvRole"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="ROLE: Station User"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="13sp"
-                    android:paddingBottom="4dp" />
-
-                <TextView
-                    android:id="@+id/tvEscom"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="ESCOM: HESCOM"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:paddingBottom="4dp" />
-
-
-
-                <!-- Divider before token info -->
+                <!-- Divider -->
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:background="@color/divider_color"
-                    android:layout_marginTop="8dp"
-                    android:layout_marginBottom="8dp" />
+                    android:layout_marginBottom="16dp" />
 
-                <!-- 🆕 Token Expiry -->
-                <TextView
-                    android:id="@+id/tvTokenExpiry"
+                <!-- Info Section -->
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Session Expires: 11/01/2026 14:36"
-                    android:textColor="#F57C00"
-                    android:textSize="12sp"
-                    android:paddingBottom="4dp" />
+                    android:orientation="vertical">
 
-                <!-- 🆕 Token Status -->
-                <TextView
-                    android:id="@+id/tvTokenStatus"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="✓ Session Active"
-                    android:textColor="#2E7D32"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:paddingBottom="8dp" />
+                    <!-- Username from Token -->
+                    <TextView
+                        android:id="@+id/tvUsername"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="USER: AFZALPUR_110"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:paddingBottom="4dp" />
+
+                    <!-- Role from Token -->
+                    <TextView
+                        android:id="@+id/tvRole"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="ROLE: Station User"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"
+                        android:paddingBottom="4dp" />
+
+                    <TextView
+                        android:id="@+id/tvEscom"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="ESCOM: HESCOM"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:paddingBottom="4dp" />
+
+                    <!-- Divider before token info -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/divider_color"
+                        android:layout_marginTop="8dp"
+                        android:layout_marginBottom="8dp" />
+
+                    <!-- Token Expiry -->
+                    <TextView
+                        android:id="@+id/tvTokenExpiry"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Session Expires: 11/01/2026 14:36"
+                        android:textColor="#F57C00"
+                        android:textSize="12sp"
+                        android:paddingBottom="4dp" />
+
+                    <!-- Token Status -->
+                    <TextView
+                        android:id="@+id/tvTokenStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="✅ Session Active"
+                        android:textColor="#2E7D32"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:paddingBottom="8dp" />
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/tvDate"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Date: 10/01/2026"
+                            android:textColor="@color/text_primary"
+                            android:textSize="13sp"
+                            android:padding="4dp"
+                            android:textStyle="bold"/>
+
+                        <TextView
+                            android:id="@+id/tvTime"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Time: 20:51:13"
+                            android:textColor="@color/text_primary"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Confirmation Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/confirmationBtn"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:text="Station Feeder Confirmation"
+            android:textColor="@android:color/white"
+            android:textSize="16sp"
+            app:backgroundTint="@color/primary_light"
+            app:cornerRadius="20dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/mainCard" />
+
+        <!-- ✅ DCC SECTION (shown only for DCC users) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardDccSection"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_margin="16dp"
+            android:visibility="gone"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="@color/primary_light"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/confirmationBtn"
+            tools:visibility="visible">
+
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:orientation="vertical"
+                android:padding="16dp">
 
                 <TextView
-                    android:id="@+id/tvDate"
+                    android:id="@+id/tvDccTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Date: 10/01/2026"
-                    android:textColor="@color/text_primary"
-                    android:textSize="13sp"
-                    android:padding="4dp"
-                    android:textStyle="bold"/>
+                    android:text="👑 DCC Ticket Approval"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/white"
+                    android:gravity="center" />
 
                 <TextView
-                    android:id="@+id/tvTime"
+                    android:id="@+id/tvTicketCount"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Time: 20:51:13"
-                    android:textColor="@color/text_primary"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
+                    android:layout_marginTop="8dp"
+                    android:text="Loading tickets..."
+                    android:textSize="14sp"
+                    android:textColor="@android:color/white"
+                    android:gravity="center" />
             </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-            </LinearLayout>
+        <!-- ✅ DCC Tickets RecyclerView (Directly below the card) -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvDccTickets"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="16dp"
+            android:nestedScrollingEnabled="false"
+            android:visibility="gone"
+            android:background="@drawable/bg_card"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.0"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/cardDccSection"
+            app:layout_constraintVertical_bias="1.0"
+            tools:itemCount="3"
+            tools:listitem="@layout/item_ticket_approval"
+            tools:visibility="visible" />
 
-        </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
-    </com.google.android.material.card.MaterialCardView>
-
-    <!-- Confirmation Button -->
-
-
-    <!-- Tickets List -->
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/confirmationBtn"
-        android:layout_width="379dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="48dp"
-        android:text="Station Feeder Confirmation"
-        android:textColor="@android:color/white"
-        android:textSize="16sp"
-        app:backgroundTint="@color/primary_light"
-        app:cornerRadius="20dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/mainCard" />
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/dccBtn"
-        android:layout_width="379dp"
-        android:layout_height="wrap_content"
-        android:text="Reports"
-        android:textColor="@android:color/white"
-        android:textSize="16sp"
-        android:visibility="gone"
-        app:backgroundTint="@color/primary_light"
-        app:cornerRadius="20dp"
-        app:layout_constraintBottom_toTopOf="@+id/ticketsRecyclerView"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/confirmationBtn" />
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/ticketsRecyclerView"
-        android:layout_width="379dp"
-        android:layout_height="193dp"
-        android:layout_marginTop="52dp"
-        android:clipToPadding="false"
-        android:paddingBottom="16dp"
-        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/confirmationBtn"
-        app:layout_constraintVertical_bias="0.955"
-        tools:layout_editor_absoluteX="16dp"
-        tools:listitem="@layout/item_ticket" />
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.core.widget.NestedScrollView>

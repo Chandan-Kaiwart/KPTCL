@@ -1,4 +1,4 @@
-package com.apc.kptcl.home.users.ticket
+package com.apc.kptcl.home.users.ticket.confirmation
 
 import android.os.Bundle
 import android.util.Log
@@ -126,7 +126,7 @@ class FeederConfirmationFragment : Fragment() {
 
                 withContext(Dispatchers.Main) {
                     if (response.success) {
-                        Log.d(TAG, "✅ Received ${response.count} feeders")
+                        Log.d(TAG, "âœ… Received ${response.count} feeders")
 
                         // Convert API response to FeederData
                         val feeders = response.data.map { item ->

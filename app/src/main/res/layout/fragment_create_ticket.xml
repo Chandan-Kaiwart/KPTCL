@@ -88,9 +88,6 @@
                                 android:id="@+id/etUsername"
                                 android:layout_width="match_parent"
                                 android:textColor="@color/black"
-                                android:outlineSpotShadowColor="@color/black"
-                                android:textColorHint="@color/black"
-                                android:outlineAmbientShadowColor="@color/black"
                                 android:layout_height="wrap_content"
                                 android:hint="Username"
                                 android:enabled="false"
@@ -127,9 +124,6 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:textColor="@color/black"
-                                android:outlineSpotShadowColor="@color/black"
-                                android:textColorHint="@color/black"
-                                android:outlineAmbientShadowColor="@color/black"
                                 android:hint="Enter department"
                                 android:textSize="12sp" />
                         </com.google.android.material.textfield.TextInputLayout>
@@ -155,16 +149,15 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense">
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense"
+                            app:boxStrokeColor="@color/black"
+                            app:hintTextColor="@color/black">
 
                             <com.google.android.material.textfield.TextInputEditText
                                 android:id="@+id/etEmail"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:textColor="@color/black"
-                                android:outlineSpotShadowColor="@color/black"
-                                android:textColorHint="@color/black"
-                                android:outlineAmbientShadowColor="@color/black"
                                 android:hint="Enter email"
                                 android:inputType="textEmailAddress"
                                 android:textSize="12sp" />
@@ -182,7 +175,7 @@
                             android:layout_width="100dp"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center_vertical"
-                            android:text="CONTACT NO:"
+                            android:text="CONTACT:"
                             android:textColor="@color/error_red"
                             android:textSize="12sp"
                             android:textStyle="bold" />
@@ -200,35 +193,31 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:textColor="@color/black"
-                                android:outlineSpotShadowColor="@color/black"
-                                android:textColorHint="@color/black"
-                                android:outlineAmbientShadowColor="@color/black"
                                 android:hint="Enter contact number"
                                 android:inputType="phone"
                                 android:textSize="12sp" />
                         </com.google.android.material.textfield.TextInputLayout>
                     </LinearLayout>
 
-                    <!-- Ticket Classification (Dropdown) -->
+                    <!-- Classification -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:orientation="horizontal">
+                        android:layout_marginTop="12dp"
+                        android:orientation="vertical">
 
                         <TextView
-                            android:layout_width="100dp"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_gravity="center_vertical"
                             android:text="CLASSIFICATION:"
                             android:textColor="@color/error_red"
                             android:textSize="12sp"
                             android:textStyle="bold" />
 
                         <com.google.android.material.textfield.TextInputLayout
-                            android:layout_width="0dp"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
+                            android:layout_marginTop="4dp"
                             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
                             app:boxStrokeColor="@color/black"
                             app:hintTextColor="@color/black">
@@ -244,26 +233,25 @@
                         </com.google.android.material.textfield.TextInputLayout>
                     </LinearLayout>
 
-                    <!-- Feeder Name (Dropdown) -->
+                    <!-- Feeder Name (pre-filled) -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:orientation="horizontal">
+                        android:layout_marginTop="12dp"
+                        android:orientation="vertical">
 
                         <TextView
-                            android:layout_width="100dp"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_gravity="center_vertical"
                             android:text="FEEDER NAME:"
-                            android:textColor="@color/error_red"
+                            android:textColor="@color/text_primary"
                             android:textSize="12sp"
                             android:textStyle="bold" />
 
                         <com.google.android.material.textfield.TextInputLayout
-                            android:layout_width="0dp"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
+                            android:layout_marginTop="4dp"
                             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
                             app:boxStrokeColor="@color/black"
                             app:hintTextColor="@color/black">
@@ -273,32 +261,31 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:textColor="@color/black"
-                                android:hint="Select feeder name"
+                                android:hint="Feeder name"
                                 android:inputType="none"
                                 android:textSize="12sp" />
                         </com.google.android.material.textfield.TextInputLayout>
                     </LinearLayout>
 
-                    <!-- Feeder Category (Dropdown) -->
+                    <!-- Feeder Category (pre-filled) -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:orientation="horizontal">
+                        android:orientation="vertical">
 
                         <TextView
-                            android:layout_width="100dp"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_gravity="center_vertical"
                             android:text="FEEDER CATEGORY:"
-                            android:textColor="@color/error_red"
+                            android:textColor="@color/text_primary"
                             android:textSize="12sp"
                             android:textStyle="bold" />
 
                         <com.google.android.material.textfield.TextInputLayout
-                            android:layout_width="0dp"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
+                            android:layout_marginTop="4dp"
                             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
                             app:boxStrokeColor="@color/black"
                             app:hintTextColor="@color/black">
@@ -313,6 +300,88 @@
                                 android:textSize="12sp" />
                         </com.google.android.material.textfield.TextInputLayout>
                     </LinearLayout>
+
+                    <!-- ✅ NEW FIELD: New Feeder Code (shown dynamically) -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilNewFeederCode"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:visibility="gone"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense"
+                        app:boxStrokeColor="@color/black"
+                        app:hintTextColor="@color/black">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etNewFeederCode"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/black"
+                            android:hint="Enter new feeder code"
+                            android:textSize="12sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- ✅ NEW FIELD: New Feeder Name (shown dynamically) -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilNewFeederName"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:visibility="gone"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense"
+                        app:boxStrokeColor="@color/black"
+                        app:hintTextColor="@color/black">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etNewFeederName"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/black"
+                            android:hint="Enter new feeder name"
+                            android:textSize="12sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- ✅ NEW FIELD: New Feeder Category (shown dynamically) -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilNewFeederCategory"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:visibility="gone"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
+                        app:boxStrokeColor="@color/black"
+                        app:hintTextColor="@color/black">
+
+                        <AutoCompleteTextView
+                            android:id="@+id/actvNewFeederCategory"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/black"
+                            android:hint="Select new category"
+                            android:inputType="none"
+                            android:textSize="12sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- ✅ NEW FIELD: New Status (shown dynamically) -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilNewStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:visibility="gone"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
+                        app:boxStrokeColor="@color/black"
+                        app:hintTextColor="@color/black">
+
+                        <AutoCompleteTextView
+                            android:id="@+id/actvNewStatus"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/black"
+                            android:hint="Select new status"
+                            android:inputType="none"
+                            android:textSize="12sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
 
                     <!-- Problem Statement -->
                     <LinearLayout
@@ -342,9 +411,6 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:textColor="@color/black"
-                                android:outlineSpotShadowColor="@color/black"
-                                android:textColorHint="@color/black"
-                                android:outlineAmbientShadowColor="@color/black"
                                 android:gravity="top"
                                 android:hint="Describe your problem..."
                                 android:inputType="textMultiLine"
@@ -389,9 +455,6 @@
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:textColor="@color/black"
-                                    android:outlineSpotShadowColor="@color/black"
-                                    android:textColorHint="@color/black"
-                                    android:outlineAmbientShadowColor="@color/black"
                                     android:enabled="false"
                                     android:textSize="11sp" />
                             </com.google.android.material.textfield.TextInputLayout>
@@ -426,9 +489,6 @@
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:textColor="@color/black"
-                                    android:outlineSpotShadowColor="@color/black"
-                                    android:textColorHint="@color/black"
-                                    android:outlineAmbientShadowColor="@color/black"
                                     android:enabled="false"
                                     android:textSize="11sp" />
                             </com.google.android.material.textfield.TextInputLayout>

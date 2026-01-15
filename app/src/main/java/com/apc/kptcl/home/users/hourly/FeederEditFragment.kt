@@ -375,7 +375,7 @@ class FeederEditFragment : Fragment() {
         // ✅ Create ROW data for each HOUR (like Entry Fragment)
         val rows = mutableListOf<HourlyEditRow>()
 
-        for (hour in 0 until numberOfHours) {
+        for (hour in 1 until numberOfHours) {
             val hourStr = String.format("%02d", hour)
             val parameterValues = mutableMapOf<String, String>()
 
@@ -399,7 +399,7 @@ class FeederEditFragment : Fragment() {
     private fun loadEmptyData(feeder: FeederData) {
         val rows = mutableListOf<HourlyEditRow>()
 
-        for (hour in 0 until numberOfHours) {
+        for (hour in 1 until numberOfHours) {
             val hourStr = String.format("%02d", hour)
             val parameterValues = mutableMapOf<String, String>()
 

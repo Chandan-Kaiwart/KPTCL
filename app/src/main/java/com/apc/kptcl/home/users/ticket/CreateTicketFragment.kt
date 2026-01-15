@@ -13,12 +13,16 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.apc.kptcl.R
 import com.apc.kptcl.databinding.FragmentCreateTicketBinding
-import com.apc.kptcl.home.users.ticket.dataclass.CreateTicketRequest
-import com.apc.kptcl.home.users.ticket.dataclass.TicketApiService
 import com.apc.kptcl.utils.SessionManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.io.OutputStreamWriter
+import java.net.HttpURLConnection
+import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -27,29 +31,19 @@ class CreateTicketFragment : Fragment() {
     private var _binding: FragmentCreateTicketBinding? = null
     private val binding get() = _binding!!
 
-    // ✅ FIXED: Changed to match portal format (YYYY-MM-DD HH:MM) without timezone
     private val dateTimeFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
 
-    // Variables to store passed feeder data
+    // Passed feeder data from FeederConfirmationFragment
     private var passedFeederName: String? = null
     private var passedFeederCode: String? = null
     private var passedFeederCategory: String? = null
+    private var isFromFeederConfirmation = false
 
     companion object {
-        private const val TAG = "CreateTicketFragment"
-        // Create ticket API is on port 5016
-        private const val CREATE_TICKET_API_BASE_URL = "http://62.72.59.119:5016/"
+        private const val TAG = "CreateTicket"
+        private const val API_URL = "http://62.72.59.119:5016/api/ticket/create"
+        private const val TIMEOUT = 15000
     }
-
-    // API setup
-    private val retrofit by lazy {
-        Retrofit.Builder()
-            .baseUrl(CREATE_TICKET_API_BASE_URL)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-    }
-
-    private val apiService by lazy { retrofit.create(TicketApiService::class.java) }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -63,151 +57,156 @@ class CreateTicketFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Get arguments passed from FeederConfirmationFragment
+        // Get passed arguments
         passedFeederName = arguments?.getString("feederName")
         passedFeederCode = arguments?.getString("feederCode")
         passedFeederCategory = arguments?.getString("feederCategory")
+        isFromFeederConfirmation = !passedFeederName.isNullOrEmpty()
 
-        Log.d(TAG, "Received arguments:")
-        Log.d(TAG, "  Feeder Name: $passedFeederName")
-        Log.d(TAG, "  Feeder Code: $passedFeederCode")
-        Log.d(TAG, "  Feeder Category: $passedFeederCategory")
+        Log.d(TAG, "📍 Entry: ${if (isFromFeederConfirmation) "Feeder Confirmation" else "Direct"}")
+        Log.d(TAG, "📋 Feeder: $passedFeederName | Code: $passedFeederCode | Category: $passedFeederCategory")
 
-        setupToolbar()
         setupDropdowns()
         setupInitialValues()
         setupButtons()
     }
 
-    private fun setupToolbar() {
-//        binding.toolbar.setNavigationOnClickListener {
-//            activity?.onBackPressed()
-//        }
-    }
-
     private fun setupDropdowns() {
-        // Classification dropdown - matches portal classifications
-        val classifications = arrayOf(
-            "FEEDER CODE",
-            "FEEDER NAME",
-            "FEEDER CATEGORY",
-            "FEEDER STATUS",
-            "NEW FEEDER ADDITION",
-            "GENERAL TICKET",
-            "EQUIPMENT ISSUE",
-            "POWER OUTAGE",
-            "MAINTENANCE REQUEST"
-        )
-        val classificationAdapter = ArrayAdapter(
-            requireContext(),
-            android.R.layout.simple_dropdown_item_1line,
-            classifications
-        )
-        binding.actvClassification.setAdapter(classificationAdapter)
+        // Different classifications based on entry point
+        val classifications = if (isFromFeederConfirmation) {
+            arrayOf(
+                "FEEDER CODE",
+                "FEEDER NAME",
+                "FEEDER CATEGORY",
+                "FEEDER STATUS",
+                "NEW FEEDER ADDITION",
+                "GENERAL TICKET"
+            )
+        } else {
+            arrayOf("GENERAL TICKET")
+        }
 
-        // Feeder Name dropdown - You can load these from API or database
-        val feederNames = arrayOf(
-            "F1- Sirasagi Maddi",
-            "F2- High Court",
-            "F3- City Station",
-            "F4- Kionics"
+        binding.actvClassification.setAdapter(
+            ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, classifications)
         )
-        val feederNameAdapter = ArrayAdapter(
-            requireContext(),
-            android.R.layout.simple_dropdown_item_1line,
-            feederNames
-        )
-        binding.actvFeederName.setAdapter(feederNameAdapter)
 
-        // Feeder Category dropdown
+        // Feeder Categories (for display only - pre-filled)
         val feederCategories = arrayOf(
-            "11KV",
-            "33KV",
-            "66KV",
-            "110KV",
-            "220KV",
-            "URBAN",
+            "AGRICULTURE",
+            "INDUSTRIAL",
+            "NJY",
             "RURAL",
-            "INDUSTRIAL"
+            "URBAN",
+            "WATERSUPPLY"
         )
-        val feederCategoryAdapter = ArrayAdapter(
-            requireContext(),
-            android.R.layout.simple_dropdown_item_1line,
-            feederCategories
+        binding.actvFeederCategory.setAdapter(
+            ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, feederCategories)
         )
-        binding.actvFeederCategory.setAdapter(feederCategoryAdapter)
 
-        // ✅ NEW: Add listener to handle classification-specific UI changes
+        // New Feeder Category dropdown (for changing category)
+        binding.actvNewFeederCategory.setAdapter(
+            ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, feederCategories)
+        )
+
+        // ✅ FIXED: Status dropdown - Only INACTIVE (ACTIVE removed)
+        binding.actvNewStatus.setAdapter(
+            ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line,
+                arrayOf("INACTIVE"))  // Only INACTIVE option
+        )
+
+        // Handle classification change
         binding.actvClassification.setOnItemClickListener { _, _, position, _ ->
             handleClassificationChange(classifications[position])
         }
+
+        // ✅ FIXED: Disable both feeder name AND category if from confirmation
+        if (isFromFeederConfirmation) {
+            binding.actvFeederName.isEnabled = false
+            binding.actvFeederCategory.isEnabled = false  // ✅ Non-editable
+        } else {
+            binding.actvFeederName.isEnabled = false
+            binding.actvFeederCategory.isEnabled = false
+        }
     }
 
-    /**
-     * ✅ NEW: Handle UI changes based on selected classification
-     */
     private fun handleClassificationChange(classification: String) {
+        // Hide all dynamic fields
+        binding.tilNewFeederCode.visibility = View.GONE
+        binding.tilNewFeederName.visibility = View.GONE
+        binding.tilNewFeederCategory.visibility = View.GONE
+        binding.tilNewStatus.visibility = View.GONE
+
         when (classification.uppercase()) {
+            "FEEDER CODE" -> {
+                // ✅ FIXED: Show field but make it non-editable with toast
+                binding.tilNewFeederCode.visibility = View.VISIBLE
+                binding.etNewFeederCode.isEnabled = false  // ✅ Non-editable
+                binding.etNewFeederCode.hint = "Will be assigned by DCC"
+                Toast.makeText(
+                    requireContext(),
+                    "⚠️ Only DCC can assign feeder code\nTicket will be raised for code request",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
             "FEEDER NAME" -> {
-                // Show old/new feeder name fields if you have them
-                Toast.makeText(requireContext(), "Please provide old and new feeder names", Toast.LENGTH_SHORT).show()
+                binding.tilNewFeederName.visibility = View.VISIBLE
+                Toast.makeText(requireContext(), "💡 Enter new feeder name", Toast.LENGTH_SHORT).show()
             }
             "FEEDER CATEGORY" -> {
-                // Emphasize new category field
-                Toast.makeText(requireContext(), "Please select new feeder category", Toast.LENGTH_SHORT).show()
+                binding.tilNewFeederCategory.visibility = View.VISIBLE
+                Toast.makeText(requireContext(), "💡 Select new category", Toast.LENGTH_SHORT).show()
             }
             "FEEDER STATUS" -> {
-                // Show status options
-                Toast.makeText(requireContext(), "Please specify new feeder status", Toast.LENGTH_SHORT).show()
+                binding.tilNewStatus.visibility = View.VISIBLE
+                Toast.makeText(requireContext(), "💡 Select INACTIVE to disable feeder", Toast.LENGTH_SHORT).show()
             }
             "NEW FEEDER ADDITION" -> {
-                // Clear existing feeder selection
-                Toast.makeText(requireContext(), "Adding new feeder - provide name and category", Toast.LENGTH_SHORT).show()
+                binding.tilNewFeederName.visibility = View.VISIBLE
+                binding.tilNewFeederCategory.visibility = View.VISIBLE
+                // ✅ FIXED: New feeder code also non-editable
+                binding.tilNewFeederCode.visibility = View.VISIBLE
+                binding.etNewFeederCode.isEnabled = false
+                binding.etNewFeederCode.hint = "Will be assigned by DCC"
+                Toast.makeText(
+                    requireContext(),
+                    "⚠️ Only DCC can assign feeder code\nEnter name & category, code will be assigned later",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            "GENERAL TICKET" -> {
+                Toast.makeText(requireContext(), "💡 Describe your problem", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
     private fun setupInitialValues() {
-        // Set read-only values from SessionManager
         val username = SessionManager.getUsername(requireContext())
         binding.etUsername.setText(username)
 
-        // ✅ FIXED: Set default classification to match portal default
-        binding.actvClassification.setText("FEEDER CODE", false)
+        if (isFromFeederConfirmation) {
+            binding.actvClassification.setText("FEEDER CODE", false)
+            handleClassificationChange("FEEDER CODE")
+        } else {
+            binding.actvClassification.setText("GENERAL TICKET", false)
+            handleClassificationChange("GENERAL TICKET")
+        }
 
-        // ✅ FIXED: Set current datetime in IST format matching portal
         binding.etStartDateTime.setText(getCurrentDateTime())
-
-        // ✅ FIXED: Changed from "OPEN" to "ACTIVE" to match portal
         binding.etTicketStatus.setText("ACTIVE")
 
-        // ✅ PRE-FILL FEEDER DATA IF PASSED FROM CONFIRMATION PAGE
-        if (!passedFeederName.isNullOrEmpty()) {
+        // ✅ FIXED: Pre-fill feeder data (both name AND category)
+        if (isFromFeederConfirmation) {
             binding.actvFeederName.setText(passedFeederName, false)
-            Log.d(TAG, "✅ Pre-filled Feeder Name: $passedFeederName")
-        }
-
-        if (!passedFeederCategory.isNullOrEmpty()) {
-            binding.actvFeederCategory.setText(passedFeederCategory, false)
-            Log.d(TAG, "✅ Pre-filled Feeder Category: $passedFeederCategory")
-        }
-
-        // Show a toast to inform user that feeder is pre-selected
-        if (!passedFeederName.isNullOrEmpty()) {
+            binding.actvFeederCategory.setText(passedFeederCategory, false)  // ✅ Pre-filled, non-editable
             Toast.makeText(
                 requireContext(),
-                "Feeder pre-selected: $passedFeederName",
+                "✅ Feeder: $passedFeederName\n📂 Category: $passedFeederCategory",
                 Toast.LENGTH_SHORT
             ).show()
         }
     }
 
-    /**
-     * ✅ FIXED: Get current datetime in IST timezone matching portal format
-     * Portal uses: datetime.now(ist).strftime("%Y-%m-%d %H:%M")
-     */
     private fun getCurrentDateTime(): String {
-        // Get current time in IST (India Standard Time - UTC+5:30)
         val calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Kolkata"))
         return dateTimeFormat.format(calendar.time)
     }
@@ -224,147 +223,223 @@ class CreateTicketFragment : Fragment() {
         var isValid = true
 
         if (binding.etDepartment.text.isNullOrBlank()) {
-            binding.etDepartment.error = "Department is required"
+            binding.etDepartment.error = "Required"
             isValid = false
         }
 
         if (binding.etEmail.text.isNullOrBlank()) {
-            binding.etEmail.error = "Email is required"
+            binding.etEmail.error = "Required"
             isValid = false
         } else if (!Patterns.EMAIL_ADDRESS.matcher(binding.etEmail.text.toString()).matches()) {
-            binding.etEmail.error = "Invalid email format"
+            binding.etEmail.error = "Invalid email"
             isValid = false
         }
 
         if (binding.etContact.text.isNullOrBlank()) {
-            binding.etContact.error = "Contact number is required"
-            isValid = false
-        } else if (binding.etContact.text.toString().length < 10) {
-            binding.etContact.error = "Contact must be at least 10 digits"
+            binding.etContact.error = "Required"
             isValid = false
         }
 
         if (binding.actvClassification.text.isNullOrBlank()) {
-            binding.actvClassification.error = "Classification is required"
+            binding.actvClassification.error = "Required"
             isValid = false
         }
 
-        // ✅ Classification-specific validation
+        if (binding.etProblemStatement.text.isNullOrBlank()) {
+            binding.etProblemStatement.error = "Required"
+            isValid = false
+        }
+
+        // Validate based on classification
         val classification = binding.actvClassification.text.toString().uppercase()
 
         when (classification) {
-            "FEEDER CODE", "FEEDER CATEGORY", "FEEDER STATUS" -> {
-                if (binding.actvFeederName.text.isNullOrBlank()) {
-                    binding.actvFeederName.error = "Feeder name is required for $classification"
+            "FEEDER CODE" -> {
+                // ✅ FIXED: No validation needed - DCC will assign code
+                // Just check problem statement is filled
+            }
+            "FEEDER NAME" -> {
+                if (binding.etNewFeederName.text.isNullOrBlank()) {
+                    binding.etNewFeederName.error = "New name required"
                     isValid = false
                 }
-                if (binding.actvFeederCategory.text.isNullOrBlank()) {
-                    binding.actvFeederCategory.error = "Feeder category is required for $classification"
+            }
+            "FEEDER CATEGORY" -> {
+                if (binding.actvNewFeederCategory.text.isNullOrBlank()) {
+                    binding.actvNewFeederCategory.error = "New category required"
+                    isValid = false
+                }
+            }
+            "FEEDER STATUS" -> {
+                if (binding.actvNewStatus.text.isNullOrBlank()) {
+                    binding.actvNewStatus.error = "Select INACTIVE"
                     isValid = false
                 }
             }
             "NEW FEEDER ADDITION" -> {
-                // For new feeder, we need name and category but not existing feeder selection
-                // This would require additional UI fields for new feeder name/category
+                if (binding.etNewFeederName.text.isNullOrBlank() ||
+                    binding.actvNewFeederCategory.text.isNullOrBlank()) {
+                    Toast.makeText(requireContext(), "Name & category required\n(Code will be assigned by DCC)", Toast.LENGTH_SHORT).show()
+                    isValid = false
+                }
+                // ✅ FIXED: No code validation - DCC assigns it
             }
-        }
-
-        if (binding.etProblemStatement.text.isNullOrBlank()) {
-            binding.etProblemStatement.error = "Problem statement is required"
-            isValid = false
         }
 
         return isValid
     }
 
     private fun submitTicket() {
-        // Show loading
         binding.btnSubmit.isEnabled = false
         binding.btnSubmit.text = "Submitting..."
 
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                // Get token from SessionManager
                 val token = SessionManager.getToken(requireContext())
 
                 if (token.isEmpty()) {
-                    showError("Session expired. Please login again.")
+                    showError("Session expired")
                     return@launch
                 }
 
-                // ✅ FIXED: Prepare request body with proper classification details
                 val classification = binding.actvClassification.text.toString()
-                val feederName = binding.actvFeederName.text.toString()
-                val feederCategory = binding.actvFeederCategory.text.toString()
+                val requestJson = buildRequestJson(classification)
 
-                val request = CreateTicketRequest(
-                    ticketClassification = classification,
-                    problemStatement = binding.etProblemStatement.text.toString(),
-                    feederName = feederName,
-                    feederCategory = feederCategory,
-                    emailId = binding.etEmail.text.toString(),
-                    mobileNumber = binding.etContact.text.toString(),
-                    userDepartment = binding.etDepartment.text.toString(),
-                    attachmentName = null,
-                    attachment = null,
-                    resolutionProvided = null,
-                    // ✅ FIXED: Include feeder code if available (for FEEDER CODE classification)
-                    feederCode = passedFeederCode,
-                    // ✅ REMOVED: classificationDetails - API will build this server-side
-                    // ✅ REMOVED: detailsDict - not needed
-                    // ✅ REMOVED: status - API sets this to "ACTIVE"
-                )
+                Log.d(TAG, "🚀 Submitting ticket")
+                Log.d(TAG, "📦 Request: $requestJson")
 
-                Log.d(TAG, "Creating ticket...")
-                Log.d(TAG, "Token: ${token.take(50)}...")
-                Log.d(TAG, "API URL: $CREATE_TICKET_API_BASE_URL")
-                Log.d(TAG, "Classification: $classification")
-                Log.d(TAG, "Feeder Name: $feederName")
-                Log.d(TAG, "Feeder Category: $feederCategory")
-                Log.d(TAG, "Feeder Code: $passedFeederCode")
+                val response = createTicketAPI(token, requestJson)
 
-                val response = apiService.createTicket("Bearer $token", request)
-
-                Log.d(TAG, "Response code: ${response.code()}")
-
-                if (response.isSuccessful && response.body() != null) {
-                    val ticketResponse = response.body()!!
-
-                    Log.d(TAG, "Response: $ticketResponse")
-
-                    if (ticketResponse.success) {
+                withContext(Dispatchers.Main) {
+                    if (response.success) {
                         Toast.makeText(
                             requireContext(),
-                            "✅ Ticket created successfully!\nTicket ID: ${ticketResponse.ticketId ?: ""}\nStatus: ACTIVE",
+                            "✅ Ticket ${response.ticketId} created!\nStatus: ACTIVE\nWaiting for DCC approval",
                             Toast.LENGTH_LONG
                         ).show()
-
-                        // Navigate back to view tickets
                         findNavController().popBackStack()
                     } else {
-                        showError(ticketResponse.message ?: "Failed to create ticket")
-                    }
-                } else {
-                    val errorBody = response.errorBody()?.string()
-                    Log.e(TAG, "API Error - Code: ${response.code()}, Message: ${response.message()}")
-                    Log.e(TAG, "Error body: $errorBody")
-
-                    when (response.code()) {
-                        401 -> showError("Session expired. Please login again.")
-                        400 -> showError("Invalid ticket data. Please check all fields.\n$errorBody")
-                        else -> showError("Error: ${response.code()} - ${response.message()}")
+                        showError(response.message)
                     }
                 }
+
             } catch (e: Exception) {
-                Log.e(TAG, "Network error", e)
-                showError("Network error: ${e.message}")
-                e.printStackTrace()
+                Log.e(TAG, "❌ Error", e)
+                withContext(Dispatchers.Main) {
+                    showError("Network error: ${e.message}")
+                }
             } finally {
-                // Reset button
-                binding.btnSubmit.isEnabled = true
-                binding.btnSubmit.text = "SUBMIT"
+                withContext(Dispatchers.Main) {
+                    binding.btnSubmit.isEnabled = true
+                    binding.btnSubmit.text = "SUBMIT"
+                }
             }
         }
+    }
+
+    private fun buildRequestJson(classification: String): JSONObject {
+        val json = JSONObject()
+
+        // Common fields
+        json.put("ticketClassification", classification)
+        json.put("problemStatement", binding.etProblemStatement.text.toString())
+        json.put("emailId", binding.etEmail.text.toString())
+        json.put("mobileNumber", binding.etContact.text.toString())
+        json.put("userDepartment", binding.etDepartment.text.toString())
+
+        // Add feeder data if from confirmation
+        if (isFromFeederConfirmation) {
+            json.put("feederName", passedFeederName)
+            json.put("feederCode", passedFeederCode)
+            json.put("feederCategory", passedFeederCategory)
+
+            // Add new values based on classification
+            when (classification.uppercase()) {
+                "FEEDER CODE" -> {
+                    json.put("oldFeederCode", passedFeederCode)
+                    // ✅ FIXED: No newFeederCode - DCC will assign
+                    Log.d(TAG, "📦 FEEDER CODE change request (DCC will assign new code)")
+                }
+
+                "FEEDER NAME" -> {
+                    json.put("oldFeederName", passedFeederName)
+                    json.put("newFeederName", binding.etNewFeederName.text.toString())
+                    Log.d(TAG, "📦 NEW_FEEDER_NAME: ${binding.etNewFeederName.text}")
+                }
+
+                "FEEDER CATEGORY" -> {
+                    json.put("oldFeederCategory", passedFeederCategory)
+                    json.put("newFeederCategory", binding.actvNewFeederCategory.text.toString())
+                    Log.d(TAG, "📦 NEW_FEEDER_CATEGORY: ${binding.actvNewFeederCategory.text}")
+                }
+
+                "FEEDER STATUS" -> {
+                    json.put("oldStatus", "ACTIVE")
+                    json.put("newStatus", binding.actvNewStatus.text.toString())  // Will be "INACTIVE"
+                    Log.d(TAG, "📦 NEW_STATUS: ${binding.actvNewStatus.text}")
+                }
+
+                "NEW FEEDER ADDITION" -> {
+                    json.put("newFeederName", binding.etNewFeederName.text.toString())
+                    json.put("newFeederCategory", binding.actvNewFeederCategory.text.toString())
+                    // ✅ FIXED: No newFeederCode - DCC will assign
+                    Log.d(TAG, "📦 NEW FEEDER (DCC will assign code)")
+                }
+            }
+        }
+
+        return json
+    }
+
+    private suspend fun createTicketAPI(token: String, requestJson: JSONObject): TicketResponse = withContext(Dispatchers.IO) {
+        val url = URL(API_URL)
+        val connection = url.openConnection() as HttpURLConnection
+
+        try {
+            connection.apply {
+                requestMethod = "POST"
+                connectTimeout = TIMEOUT
+                readTimeout = TIMEOUT
+                setRequestProperty("Content-Type", "application/json")
+                setRequestProperty("Accept", "application/json")
+                setRequestProperty("Authorization", "Bearer $token")
+                doOutput = true
+            }
+
+            OutputStreamWriter(connection.outputStream).use {
+                it.write(requestJson.toString())
+                it.flush()
+            }
+
+            val responseCode = connection.responseCode
+
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                val response = BufferedReader(InputStreamReader(connection.inputStream)).use {
+                    it.readText()
+                }
+                Log.d(TAG, "✅ Response: $response")
+                parseTicketResponse(response)
+            } else {
+                val errorBody = try {
+                    BufferedReader(InputStreamReader(connection.errorStream)).use { it.readText() }
+                } catch (e: Exception) {
+                    "No error body"
+                }
+                Log.e(TAG, "❌ Error $responseCode: $errorBody")
+                TicketResponse(false, "Error: $responseCode", null)
+            }
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private fun parseTicketResponse(jsonString: String): TicketResponse {
+        val jsonObject = JSONObject(jsonString)
+        return TicketResponse(
+            success = jsonObject.optBoolean("success", false),
+            message = jsonObject.optString("message", "Unknown error"),
+            ticketId = jsonObject.optString("ticketId", null)
+        )
     }
 
     private fun showError(message: String) {
@@ -375,4 +450,10 @@ class CreateTicketFragment : Fragment() {
         super.onDestroyView()
         _binding = null
     }
+
+    data class TicketResponse(
+        val success: Boolean,
+        val message: String,
+        val ticketId: String?
+    )
 }

@@ -63,7 +63,7 @@
         />
 <fragment
     android:id="@+id/feederConfirmation"
-    android:name="com.apc.kptcl.home.users.ticket.FeederConfirmationFragment"
+    android:name="com.apc.kptcl.home.users.ticket.confirmation.FeederConfirmationFragment"
     android:label="Feeder Confirmation"
     tools:layout="@layout/fragment_feeder_confirmation"
     >

@@ -37,6 +37,7 @@ import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
 import androidx.navigation.fragment.findNavController
+
 class FeederHourlyEntryFragment : Fragment() {
 
     private var _binding: FragmentFeederHourlyEntryBinding? = null
@@ -46,6 +47,7 @@ class FeederHourlyEntryFragment : Fragment() {
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
     private lateinit var adapter: HourlyDataAdapter
+    private lateinit var layoutManager: LinearLayoutManager
 
     private var stationName: String = ""
     private val allFeeders = mutableListOf<FeederData>()
@@ -57,6 +59,7 @@ class FeederHourlyEntryFragment : Fragment() {
     companion object {
         private const val TAG = "HourlyEntry"
         private const val FEEDER_LIST_URL = "http://62.72.59.119:5000/api/feeder/list"
+        private const val FETCH_URL = "http://62.72.59.119:4004/api/feeder/hourly-entry/fetch"
         private const val SAVE_URL = "http://62.72.59.119:4004/api/feeder/hourly-entry/save"
         private const val TIMEOUT = 15000
     }
@@ -101,21 +104,27 @@ class FeederHourlyEntryFragment : Fragment() {
                 calendar.set(year, month, dayOfMonth)
                 binding.etDate.setText(dateFormat.format(calendar.time))
                 updateDateDisplay()
+
+                // Reload data when date changes
+                if (selectedFeeder != null) {
+                    loadFeederData()
+                }
             },
             calendar.get(Calendar.YEAR),
             calendar.get(Calendar.MONTH),
             calendar.get(Calendar.DAY_OF_MONTH)
         )
 
-        // ✅ FUTURE DATES DISABLE - Present date se aage select nahi hoga
-        datePickerDialog.datePicker.maxDate = System.currentTimeMillis()
+        // Only allow yesterday and before
+        val yesterdayCalendar = Calendar.getInstance()
+        yesterdayCalendar.add(Calendar.DAY_OF_YEAR, -1)
+        datePickerDialog.datePicker.maxDate = yesterdayCalendar.timeInMillis
 
         datePickerDialog.show()
     }
 
     private fun updateDateDisplay() {
         binding.etDate.setText(dateFormat.format(calendar.time))
-        binding.tvEntryDate.text = "FOR ${dateFormat.format(calendar.time)}"
     }
 
     private fun fetchFeederList() {
@@ -241,13 +250,18 @@ class FeederHourlyEntryFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
+        layoutManager = LinearLayoutManager(context)
         adapter = HourlyDataAdapter()
+
         binding.rvFeederData.apply {
-            layoutManager = LinearLayoutManager(context)
+            this.layoutManager = this@FeederHourlyEntryFragment.layoutManager
             this.adapter = this@FeederHourlyEntryFragment.adapter
         }
     }
 
+    /**
+     * ✅ Load feeder data and auto-scroll to next empty hour
+     */
     private fun loadFeederData() {
         if (selectedFeeder == null) return
 
@@ -260,23 +274,140 @@ class FeederHourlyEntryFragment : Fragment() {
                     "FEEDER: ${feeder.feederName} | " +
                     "CODE: ${feeder.feederCode}"
 
-        val rows = mutableListOf<HourlyDataRow>()
+        showLoading(true)
 
-        // ✅ CHANGED: Hour format from "00:00-01:00" to just "00"
-        for (hour in 0 until numberOfHours) {
-            val hourStr = String.format("%02d", hour) // Just "00", "01", "02", etc.
-            val parameters = mutableMapOf<String, String>()
+        lifecycleScope.launch {
+            try {
+                // ✅ Fetch existing data from API
+                val existingData = withContext(Dispatchers.IO) {
+                    fetchExistingData(feeder.feederCode, dateFormat.format(calendar.time))
+                }
 
-            this.parameters.forEach { param ->
-                parameters[param] = ""
+                // Build rows
+                val rows = mutableListOf<HourlyDataRow>()
+
+                for (hour in 1 until numberOfHours) {
+                    val hourStr = String.format("%02d", hour)
+                    val parameters = mutableMapOf<String, String>()
+
+                    // Fill with existing data if available
+                    this@FeederHourlyEntryFragment.parameters.forEach { param ->
+                        val existingValue = existingData[hourStr]?.get(param) ?: ""
+                        parameters[param] = existingValue
+                    }
+
+                    rows.add(HourlyDataRow(hourStr, parameters))
+                }
+
+                adapter.submitList(rows, feeder.feederName, feeder.feederCode)
+
+                // ✅ Auto-scroll to next empty hour
+                scrollToNextEmptyHour(rows)
+
+                Log.d(TAG, "✅ Loaded data for ${feeder.feederName}")
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading data", e)
+                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            } finally {
+                showLoading(false)
+            }
+        }
+    }
+
+    /**
+     * ✅ Fetch existing data from backend
+     */
+    private suspend fun fetchExistingData(feederCode: String, date: String): Map<String, Map<String, String>> = withContext(Dispatchers.IO) {
+        val url = URL(FETCH_URL)
+        val connection = url.openConnection() as HttpURLConnection
+
+        val resultMap = mutableMapOf<String, MutableMap<String, String>>()
+
+        try {
+            val token = SessionManager.getToken(requireContext())
+
+            connection.apply {
+                requestMethod = "POST"
+                connectTimeout = TIMEOUT
+                readTimeout = TIMEOUT
+                setRequestProperty("Content-Type", "application/json")
+                setRequestProperty("Authorization", "Bearer $token")
+                doOutput = true
             }
 
-            rows.add(HourlyDataRow(hourStr, parameters))
+            val requestBody = JSONObject().apply {
+                put("date", date)
+                put("feeder_code", feederCode)
+            }
+
+            OutputStreamWriter(connection.outputStream).use { it.write(requestBody.toString()) }
+
+            val responseCode = connection.responseCode
+
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                val response = BufferedReader(InputStreamReader(connection.inputStream)).use { it.readText() }
+                val jsonResponse = JSONObject(response)
+
+                if (jsonResponse.optBoolean("success", false)) {
+                    val dataArray = jsonResponse.optJSONArray("data")
+
+                    if (dataArray != null) {
+                        for (i in 0 until dataArray.length()) {
+                            val row = dataArray.getJSONObject(i)
+                            val parameter = row.optString("PARAMETER", "")
+
+                            // Extract hour columns (00, 01, 02, ... 23)
+                            for (hour in 1 until numberOfHours) {
+                                val hourStr = String.format("%02d", hour)
+                                val value = row.optString(hourStr, "")
+
+                                if (value.isNotEmpty()) {
+                                    if (!resultMap.containsKey(hourStr)) {
+                                        resultMap[hourStr] = mutableMapOf()
+                                    }
+                                    resultMap[hourStr]!![parameter] = value
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching existing data", e)
+        } finally {
+            connection.disconnect()
         }
 
-        adapter.submitList(rows, feeder.feederName, feeder.feederCode)
+        return@withContext resultMap
+    }
 
-        Log.d(TAG, "✅ Loaded data template for ${feeder.feederName}")
+    /**
+     * ✅ AUTO-SCROLL TO NEXT EMPTY HOUR
+     */
+    private fun scrollToNextEmptyHour(rows: List<HourlyDataRow>) {
+        // Find first hour that doesn't have all parameters filled
+        val firstEmptyIndex = rows.indexOfFirst { row ->
+            row.parameters.values.any { it.isEmpty() }
+        }
+
+        if (firstEmptyIndex != -1) {
+            // ✅ Scroll to position with smooth scrolling
+            binding.rvFeederData.postDelayed({
+                layoutManager.scrollToPositionWithOffset(firstEmptyIndex, 0)
+
+                Log.d(TAG, "✅ Auto-scrolled to hour: ${rows[firstEmptyIndex].hour}")
+
+                Toast.makeText(
+                    context,
+                    "📍 Next empty hour: ${rows[firstEmptyIndex].hour}:00",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }, 300) // Small delay to ensure RecyclerView is ready
+        } else {
+            // All hours filled
+            Toast.makeText(context, "✓ All hours already filled!", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun setupButtons() {
@@ -297,7 +428,6 @@ class FeederHourlyEntryFragment : Fragment() {
             return
         }
 
-        // ✅ VALIDATION: Check if any data is entered
         val hasAnyData = rows.any { row ->
             row.parameters.values.any { it.isNotEmpty() }
         }
@@ -307,7 +437,6 @@ class FeederHourlyEntryFragment : Fragment() {
             return
         }
 
-        // Show confirmation dialog
         AlertDialog.Builder(requireContext())
             .setTitle("Confirm Submit")
             .setMessage("Submit hourly data for ${selectedFeeder?.feederName}?")
@@ -336,12 +465,9 @@ class FeederHourlyEntryFragment : Fragment() {
                         .setTitle("Success")
                         .setMessage("✓ Hourly data submitted!\n\nFeeder: ${selectedFeeder?.feederName}\nDate: $selectedDate")
                         .setPositiveButton("OK") { _, _ ->
-                            // Clear form
                             selectedFeeder = null
                             adapter.clearData()
                             binding.llFeederInfo.visibility = View.GONE
-
-                            // ✅ NAVIGATE TO HOMEPAGE
                             findNavController().popBackStack()
                         }
                         .setCancelable(false)
@@ -351,7 +477,7 @@ class FeederHourlyEntryFragment : Fragment() {
                 }
 
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Submit error", e)
+                Log.e(TAG, "Submit error", e)
                 showError("Error: ${e.message}")
             } finally {
                 showLoading(false)
@@ -374,48 +500,35 @@ class FeederHourlyEntryFragment : Fragment() {
                 connectTimeout = TIMEOUT
                 readTimeout = TIMEOUT
                 setRequestProperty("Content-Type", "application/json")
-                setRequestProperty("Accept", "application/json")
                 setRequestProperty("Authorization", "Bearer $token")
                 doOutput = true
-                doInput = true
             }
 
-            // ✅ Build rows array matching API expectations
             val rowsArray = JSONArray()
 
-            parameters.forEach { param ->
-                val rowObject = JSONObject().apply {
+            for (parameter in parameters) {
+                val hoursObject = JSONObject()
+
+                rows.forEach { row ->
+                    val value = row.parameters[parameter] ?: ""
+                    if (value.isNotEmpty()) {
+                        hoursObject.put(row.hour, value)
+                    }
+                }
+
+                rowsArray.put(JSONObject().apply {
                     put("date", date)
                     put("feeder_code", feederCode)
-                    put("feeder_name", selectedFeeder?.feederName ?: "")
-                    put("feeder_category", selectedFeeder?.feederCategory ?: "")
-                    put("parameter", param)
-
-                    // ✅ Create hours object
-                    val hoursObject = JSONObject()
-
-                    rows.forEach { row ->
-                        val hourKey = row.hour
-                        val value = row.parameters[param]
-                        if (!value.isNullOrEmpty()) {
-                            hoursObject.put(hourKey, value.toDoubleOrNull() ?: 0.0)
-                        }
-                    }
-
-                    // ✅ Add hours object to row
+                    put("parameter", parameter)
                     put("hours", hoursObject)
-                }
-                rowsArray.put(rowObject)
+                })
             }
 
-            // ✅ Use "rows" key
-            val requestBody = JSONObject().apply {
-                put("rows", rowsArray)
-            }
+            val requestBody = JSONObject().put("rows", rowsArray)
 
             Log.d(TAG, "📤 Request:\n${requestBody.toString(2)}")
 
-            OutputStreamWriter(connection.outputStream, Charsets.UTF_8).use { writer ->
+            OutputStreamWriter(connection.outputStream).use { writer ->
                 writer.write(requestBody.toString())
                 writer.flush()
             }
@@ -423,7 +536,7 @@ class FeederHourlyEntryFragment : Fragment() {
             val responseCode = connection.responseCode
 
             if (responseCode == HttpURLConnection.HTTP_OK) {
-                val response = BufferedReader(InputStreamReader(connection.inputStream, Charsets.UTF_8)).use {
+                val response = BufferedReader(InputStreamReader(connection.inputStream)).use {
                     it.readText()
                 }
 
@@ -435,19 +548,8 @@ class FeederHourlyEntryFragment : Fragment() {
                     jsonResponse.optString("message", "")
                 )
             } else {
-                val errorStream = connection.errorStream
-                val errorMessage = if (errorStream != null) {
-                    BufferedReader(InputStreamReader(errorStream)).use { it.readText() }
-                } else {
-                    "HTTP Error: $responseCode"
-                }
-
-                Log.e(TAG, "❌ Error Response: $errorMessage")
-                SaveResult(false, errorMessage)
+                SaveResult(false, "HTTP Error: $responseCode")
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Exception during save", e)
-            SaveResult(false, e.message ?: "Unknown error")
         } finally {
             connection.disconnect()
         }
@@ -526,8 +628,6 @@ class HourlyDataAdapter : RecyclerView.Adapter<HourlyDataAdapter.ViewHolder>() {
 
     override fun getItemCount(): Int = rows.size
 
-    // ✅ REPLACE THE ViewHolder CLASS (lines 525-581) WITH THIS:
-
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
 
         private val tvHour: TextView = itemView.findViewById(R.id.tvHour)
@@ -542,7 +642,7 @@ class HourlyDataAdapter : RecyclerView.Adapter<HourlyDataAdapter.ViewHolder>() {
         fun bind(row: HourlyDataRow) {
             currentRow = row
 
-            tvHour.text = row.hour
+            tvHour.text = "${row.hour}:00"
 
             setupParameterInput(etIB, "IB")
             setupParameterInput(etIR, "IR")
@@ -552,35 +652,28 @@ class HourlyDataAdapter : RecyclerView.Adapter<HourlyDataAdapter.ViewHolder>() {
         }
 
         private fun setupParameterInput(editText: EditText, parameterName: String) {
-            // Remove old watcher
             editText.tag?.let { oldWatcher ->
                 if (oldWatcher is TextWatcher) {
                     editText.removeTextChangedListener(oldWatcher)
                 }
             }
 
-            // ✅ SET PROPER INPUT TYPE AND FILTER
             if (parameterName == "MVAR") {
-                // ✅ USE TEXT INPUT - Shows full keyboard with minus!
                 editText.inputType = android.text.InputType.TYPE_CLASS_TEXT or
                         android.text.InputType.TYPE_TEXT_VARIATION_NORMAL
                 editText.filters = arrayOf(DecimalInputFilter(allowNegative = true))
                 editText.hint = "Can be ±"
             } else {
-                // Only positive for IB, IR, IY, MW
                 editText.inputType = android.text.InputType.TYPE_CLASS_NUMBER or
                         android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
                 editText.filters = arrayOf(DecimalInputFilter(allowNegative = false))
             }
 
-            // Set current value
             editText.setText(currentRow.parameters[parameterName] ?: "")
 
-            // Add new watcher
             val watcher = object : TextWatcher {
                 override fun afterTextChanged(s: Editable?) {
                     currentRow.parameters[parameterName] = s.toString()
-                    Log.d("HourlyEntry", "Hour ${currentRow.hour} - $parameterName = '${s.toString()}'")
                 }
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -590,46 +683,8 @@ class HourlyDataAdapter : RecyclerView.Adapter<HourlyDataAdapter.ViewHolder>() {
             editText.tag = watcher
         }
     }
-// ✅ REPLACE THE DecimalInputFilter CLASS (lines 584-611) WITH THIS:
-    class DecimalInputFilter(private val allowNegative: Boolean) : InputFilter {
-        override fun filter(
-            source: CharSequence?,
-            start: Int,
-            end: Int,
-            dest: Spanned?,
-            dstart: Int,
-            dend: Int
-        ): CharSequence? {
-            val builder = StringBuilder(dest ?: "")
-            builder.replace(dstart, dend, source?.subSequence(start, end).toString())
-            val result = builder.toString()
-
-            // Allow empty
-            if (result.isEmpty()) return null
-
-            // ✅ Allow just minus sign at start (for MVAR)
-            if (allowNegative && result == "-") {
-                return null
-            }
-
-            // ❌ Block minus sign for non-negative parameters (IB, IR, IY, MW)
-            if (!allowNegative && result.contains("-")) {
-                return ""
-            }
-
-            // ✅ Allow partial decimal inputs like: "1", "12", "12.", "12.5", "-1", "-12", "-12.", "-12.5"
-            // Pattern: optional minus, optional digits, optional dot, optional digits
-            if (result.matches(Regex("^-?\\d*\\.?\\d*$"))) {
-                return null // Accept
-            }
-
-            // Reject anything else
-            return ""
-        }
-    }
 }
 
-// ✅ Input filter for decimal numbers with optional negative sign
 class DecimalInputFilter(private val allowNegative: Boolean) : InputFilter {
     override fun filter(
         source: CharSequence?,
@@ -645,15 +700,14 @@ class DecimalInputFilter(private val allowNegative: Boolean) : InputFilter {
 
         if (result.isEmpty()) return null
 
-        // Allow negative sign only at the beginning for MVAR
         if (allowNegative && result == "-") return null
 
-        // Validate decimal number
-        return try {
-            result.toDouble()
-            null // Accept input
-        } catch (e: NumberFormatException) {
-            "" // Reject input
+        if (!allowNegative && result.contains("-")) return ""
+
+        if (result.matches(Regex("^-?\\d*\\.?\\d*$"))) {
+            return null
         }
+
+        return ""
     }
 }
