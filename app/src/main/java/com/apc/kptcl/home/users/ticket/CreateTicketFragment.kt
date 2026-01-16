@@ -118,10 +118,14 @@ class CreateTicketFragment : Fragment() {
             handleClassificationChange(classifications[position])
         }
 
-        // ✅ FIXED: Disable both feeder name AND category if from confirmation
+        // ✅ CHANGE 1: Disable both feeder name AND category if from confirmation
         if (isFromFeederConfirmation) {
             binding.actvFeederName.isEnabled = false
-            binding.actvFeederCategory.isEnabled = false  // ✅ Non-editable
+            binding.actvFeederCategory.isEnabled = false  // ✅ Non-editable category
+
+            // Set text color to indicate disabled state
+            binding.actvFeederName.setTextColor(resources.getColor(android.R.color.darker_gray, null))
+            binding.actvFeederCategory.setTextColor(resources.getColor(android.R.color.darker_gray, null))
         } else {
             binding.actvFeederName.isEnabled = false
             binding.actvFeederCategory.isEnabled = false
@@ -137,10 +141,16 @@ class CreateTicketFragment : Fragment() {
 
         when (classification.uppercase()) {
             "FEEDER CODE" -> {
-                // ✅ FIXED: Show field but make it non-editable with toast
+                // ✅ CHANGE 2: Show field with bold black hint
                 binding.tilNewFeederCode.visibility = View.VISIBLE
-                binding.etNewFeederCode.isEnabled = false  // ✅ Non-editable
-                binding.etNewFeederCode.hint = "Will be assigned by DCC"
+                binding.etNewFeederCode.isEnabled = false  // Non-editable
+                binding.etNewFeederCode.setText("")  // Clear any previous value
+                binding.etNewFeederCode.hint = "DCC will assign feeder code"
+
+                // Make hint bold and black
+                binding.etNewFeederCode.setHintTextColor(resources.getColor(android.R.color.black, null))
+                binding.etNewFeederCode.setTypeface(null, android.graphics.Typeface.BOLD)
+
                 Toast.makeText(
                     requireContext(),
                     "⚠️ Only DCC can assign feeder code\nTicket will be raised for code request",
@@ -162,10 +172,16 @@ class CreateTicketFragment : Fragment() {
             "NEW FEEDER ADDITION" -> {
                 binding.tilNewFeederName.visibility = View.VISIBLE
                 binding.tilNewFeederCategory.visibility = View.VISIBLE
-                // ✅ FIXED: New feeder code also non-editable
+                // ✅ New feeder code also non-editable with bold black hint
                 binding.tilNewFeederCode.visibility = View.VISIBLE
                 binding.etNewFeederCode.isEnabled = false
-                binding.etNewFeederCode.hint = "Will be assigned by DCC"
+                binding.etNewFeederCode.setText("")  // Clear any previous value
+                binding.etNewFeederCode.hint = "DCC will assign feeder code"
+
+                // Make hint bold and black
+                binding.etNewFeederCode.setHintTextColor(resources.getColor(android.R.color.black, null))
+                binding.etNewFeederCode.setTypeface(null, android.graphics.Typeface.BOLD)
+
                 Toast.makeText(
                     requireContext(),
                     "⚠️ Only DCC can assign feeder code\nEnter name & category, code will be assigned later",
@@ -193,21 +209,13 @@ class CreateTicketFragment : Fragment() {
         binding.etStartDateTime.setText(getCurrentDateTime())
         binding.etTicketStatus.setText("ACTIVE")
 
-        // ✅ FIXED: Pre-fill feeder data (both name AND category)
+        // ✅ Pre-fill feeder data (name and category)
+        // Note: Feeder code is not displayed in a separate field, only stored internally
         if (isFromFeederConfirmation) {
             binding.actvFeederName.setText(passedFeederName, false)
-            binding.actvFeederCategory.setText(passedFeederCategory, false)  // ✅ Pre-filled, non-editable
-            Toast.makeText(
-                requireContext(),
-                "✅ Feeder: $passedFeederName\n📂 Category: $passedFeederCategory",
-                Toast.LENGTH_SHORT
-            ).show()
+            binding.actvFeederCategory.setText(passedFeederCategory, false)
+            // passedFeederCode is stored for API submission but not displayed
         }
-    }
-
-    private fun getCurrentDateTime(): String {
-        val calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Kolkata"))
-        return dateTimeFormat.format(calendar.time)
     }
 
     private fun setupButtons() {
@@ -216,46 +224,61 @@ class CreateTicketFragment : Fragment() {
                 submitTicket()
             }
         }
+
+//        // Check if your XML has btnCancel, if not remove this
+//        try {
+//            binding.btnCancel.setOnClickListener {
+//                findNavController().navigateUp()
+//            }
+//        } catch (e: Exception) {
+//            Log.d(TAG, "No cancel button in layout")
+//        }
+    }
+
+    private fun getCurrentDateTime(): String {
+        return dateTimeFormat.format(Date())
     }
 
     private fun validateForm(): Boolean {
         var isValid = true
 
-        if (binding.etDepartment.text.isNullOrBlank()) {
-            binding.etDepartment.error = "Required"
+        // Username
+        if (binding.etUsername.text.isNullOrBlank()) {
+            binding.etUsername.error = "Username required"
             isValid = false
         }
 
-        if (binding.etEmail.text.isNullOrBlank()) {
-            binding.etEmail.error = "Required"
-            isValid = false
-        } else if (!Patterns.EMAIL_ADDRESS.matcher(binding.etEmail.text.toString()).matches()) {
-            binding.etEmail.error = "Invalid email"
-            isValid = false
-        }
-
-        if (binding.etContact.text.isNullOrBlank()) {
-            binding.etContact.error = "Required"
+        // Email
+        val email = binding.etEmail.text.toString()
+        if (email.isBlank() || !Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            binding.etEmail.error = "Valid email required"
             isValid = false
         }
 
-        if (binding.actvClassification.text.isNullOrBlank()) {
-            binding.actvClassification.error = "Required"
+        // Mobile
+        val mobile = binding.etContact.text.toString()
+        if (mobile.isBlank() || mobile.length != 10) {
+            binding.etContact.error = "Valid 10-digit mobile required"
             isValid = false
         }
 
+        // Problem Statement
         if (binding.etProblemStatement.text.isNullOrBlank()) {
-            binding.etProblemStatement.error = "Required"
+            binding.etProblemStatement.error = "Problem statement required"
             isValid = false
         }
 
-        // Validate based on classification
-        val classification = binding.actvClassification.text.toString().uppercase()
+        // Department
+        if (binding.etDepartment.text.isNullOrBlank()) {
+            binding.etDepartment.error = "Department required"
+            isValid = false
+        }
 
-        when (classification) {
+        // Classification-specific validation
+        val classification = binding.actvClassification.text.toString()
+        when (classification.uppercase()) {
             "FEEDER CODE" -> {
-                // ✅ FIXED: No validation needed - DCC will assign code
-                // Just check problem statement is filled
+                // No validation needed - DCC will assign code
             }
             "FEEDER NAME" -> {
                 if (binding.etNewFeederName.text.isNullOrBlank()) {
@@ -281,7 +304,7 @@ class CreateTicketFragment : Fragment() {
                     Toast.makeText(requireContext(), "Name & category required\n(Code will be assigned by DCC)", Toast.LENGTH_SHORT).show()
                     isValid = false
                 }
-                // ✅ FIXED: No code validation - DCC assigns it
+                // No code validation - DCC assigns it
             }
         }
 
@@ -356,7 +379,7 @@ class CreateTicketFragment : Fragment() {
             when (classification.uppercase()) {
                 "FEEDER CODE" -> {
                     json.put("oldFeederCode", passedFeederCode)
-                    // ✅ FIXED: No newFeederCode - DCC will assign
+                    // No newFeederCode - DCC will assign
                     Log.d(TAG, "📦 FEEDER CODE change request (DCC will assign new code)")
                 }
 
@@ -381,7 +404,7 @@ class CreateTicketFragment : Fragment() {
                 "NEW FEEDER ADDITION" -> {
                     json.put("newFeederName", binding.etNewFeederName.text.toString())
                     json.put("newFeederCategory", binding.actvNewFeederCategory.text.toString())
-                    // ✅ FIXED: No newFeederCode - DCC will assign
+                    // No newFeederCode - DCC will assign
                     Log.d(TAG, "📦 NEW FEEDER (DCC will assign code)")
                 }
             }

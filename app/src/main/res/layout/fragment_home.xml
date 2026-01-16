@@ -210,22 +210,102 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- ✅ DCC Tickets RecyclerView (Directly below the card) -->
+            <!-- ✅ CHANGE 3: Filter Controls Layout -->
+            <LinearLayout
+                android:id="@+id/filterControlsLayout"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginTop="8dp"
+                android:orientation="vertical"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/cardDccSection"
+                tools:visibility="visible">
+
+                <!-- Filter Buttons Row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center">
+
+                    <!-- Date Filter Button -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnFilterDate"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:text="📅 Date"
+                        android:textSize="12sp"
+                        app:backgroundTint="@color/primary_light"
+                        app:cornerRadius="8dp"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+                    <!-- Station Filter Button -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnFilterStation"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginEnd="4dp"
+                        android:text="🏢 Station"
+                        android:textSize="12sp"
+                        app:backgroundTint="@color/primary_light"
+                        app:cornerRadius="8dp"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+                    <!-- Clear Filters Button -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnClearFilters"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:text="🔄 Clear"
+                        android:textSize="12sp"
+                        app:backgroundTint="@color/red_500"
+                        app:cornerRadius="8dp"
+                        style="@style/Widget.MaterialComponents.Button" />
+                </LinearLayout>
+
+                <!-- Filter Status Text -->
+                <TextView
+                    android:id="@+id/tvFilterStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:padding="8dp"
+                    android:background="@drawable/bg_card"
+                    android:text="Filtering by date: 2025-01-15"
+                    android:textSize="12sp"
+                    android:textStyle="italic"
+                    android:textColor="@color/primary_light"
+                    android:gravity="center"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+            </LinearLayout>
+
+            <!-- ✅ PERFORMANCE FIX: RecyclerView with fixed height to prevent measuring all items -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvDccTickets"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="600dp"
                 android:layout_marginTop="8dp"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
                 android:layout_marginBottom="16dp"
-                android:nestedScrollingEnabled="false"
+                android:nestedScrollingEnabled="true"
                 android:visibility="gone"
                 android:background="@drawable/bg_card"
-                app:layout_constraintBottom_toBottomOf="parent"
+                android:overScrollMode="never"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintHorizontal_bias="0.0"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/cardDccSection"
-                app:layout_constraintVertical_bias="1.0"
+                app:layout_constraintTop_toBottomOf="@+id/filterControlsLayout"
                 tools:itemCount="3"
                 tools:listitem="@layout/item_ticket_approval"
                 tools:visibility="visible" />

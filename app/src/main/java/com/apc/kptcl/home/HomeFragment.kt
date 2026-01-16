@@ -1,6 +1,7 @@
 package com.apc.kptcl.home
 
 import android.app.AlertDialog
+import android.app.DatePickerDialog
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -39,6 +40,11 @@ class HomeFragment : Fragment() {
 
     private lateinit var ticketAdapter: TicketApprovalAdapter
     private var isDCCUser = false
+
+    // ✅ CHANGE 3: Filter variables
+    private var allTickets = mutableListOf<DCCApprovalFragment.PendingTicket>()
+    private var selectedDate: String? = null
+    private var selectedStation: String? = null
 
     companion object {
         private const val TAG = "HomeFragment"
@@ -146,6 +152,7 @@ class HomeFragment : Fragment() {
                 showDCCSection()
                 hideStationUserFeatures()
                 setupTicketRecyclerView()
+                setupFilters()  // ✅ CHANGE 3: Setup filters
                 loadDCCTickets()
 
                 // ✅ Disable drawer for DCC users
@@ -160,6 +167,145 @@ class HomeFragment : Fragment() {
             Log.e(TAG, "Error setting up DCC features", e)
             hideDCCSection()
             showStationUserFeatures()
+        }
+    }
+
+    /**
+     * ✅ CHANGE 3: Setup filter functionality
+     */
+    private fun setupFilters() {
+        // Date filter button
+        binding.btnFilterDate.setOnClickListener {
+            showDatePickerDialog()
+        }
+
+        // Station filter button
+        binding.btnFilterStation.setOnClickListener {
+            showStationFilterDialog()
+        }
+
+        // Clear filters button
+        binding.btnClearFilters.setOnClickListener {
+            clearFilters()
+        }
+    }
+
+    /**
+     * ✅ CHANGE 3: Show date picker dialog
+     */
+    private fun showDatePickerDialog() {
+        val calendar = Calendar.getInstance()
+        val year = calendar.get(Calendar.YEAR)
+        val month = calendar.get(Calendar.MONTH)
+        val day = calendar.get(Calendar.DAY_OF_MONTH)
+
+        DatePickerDialog(requireContext(), { _, selectedYear, selectedMonth, selectedDay ->
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            calendar.set(selectedYear, selectedMonth, selectedDay)
+            selectedDate = dateFormat.format(calendar.time)
+
+            val filterText = if (selectedStation != null) {
+                "Filters: Date=$selectedDate, Station=$selectedStation"
+            } else {
+                "Filter: Date=$selectedDate"
+            }
+            binding.tvFilterStatus.text = filterText
+            binding.tvFilterStatus.visibility = View.VISIBLE
+
+            applyFilters()
+        }, year, month, day).show()
+    }
+
+    /**
+     * ✅ CHANGE 3: Show station filter dialog - FIXED
+     */
+    private fun showStationFilterDialog() {
+        // Get unique stations from all tickets
+        val stations = allTickets.map { it.username }.distinct().sorted().toTypedArray()
+
+        Log.d(TAG, "🔍 Available stations: ${stations.joinToString()}")
+
+        if (stations.isEmpty()) {
+            Toast.makeText(requireContext(), "No stations available", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Filter by Station")
+            .setItems(stations) { _, which ->
+                selectedStation = stations[which]
+
+                Log.d(TAG, "✅ Station filter selected: $selectedStation")
+
+                val filterText = if (selectedDate != null) {
+                    "Filters: Date=$selectedDate, Station=$selectedStation"
+                } else {
+                    "Filter: Station=$selectedStation"
+                }
+                binding.tvFilterStatus.text = filterText
+                binding.tvFilterStatus.visibility = View.VISIBLE
+
+                applyFilters()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    /**
+     * ✅ CHANGE 3: Apply filters to tickets - FIXED
+     */
+    private fun applyFilters() {
+        val filteredList = if (selectedDate == null && selectedStation == null) {
+            // No filters applied, show all tickets
+            allTickets.toList()
+        } else {
+            // Apply filters
+            allTickets.filter { ticket ->
+                val matchesDate = if (selectedDate != null) {
+                    ticket.startDateTime.startsWith(selectedDate!!)
+                } else {
+                    true
+                }
+
+                val matchesStation = if (selectedStation != null) {
+                    ticket.username.equals(selectedStation, ignoreCase = true)
+                } else {
+                    true
+                }
+
+                matchesDate && matchesStation
+            }
+        }
+
+        Log.d(TAG, "🔍 Filters applied - Date: $selectedDate, Station: $selectedStation")
+        Log.d(TAG, "🔍 Showing ${filteredList.size} of ${allTickets.size} tickets")
+
+        // ✅ FIX: Create a new list instance for proper adapter update
+        ticketAdapter.submitList(ArrayList(filteredList))
+        updateTicketCount(filteredList.size, allTickets.size)
+    }
+
+    /**
+     * ✅ CHANGE 3: Clear all filters
+     */
+    private fun clearFilters() {
+        selectedDate = null
+        selectedStation = null
+        binding.tvFilterStatus.visibility = View.GONE
+
+        applyFilters()  // This will show all tickets
+
+        Toast.makeText(requireContext(), "Filters cleared", Toast.LENGTH_SHORT).show()
+    }
+
+    /**
+     * ✅ CHANGE 3: Update ticket count display
+     */
+    private fun updateTicketCount(filteredCount: Int, totalCount: Int) {
+        if (filteredCount == totalCount) {
+            binding.tvTicketCount.text = "📋 $totalCount Pending Ticket(s)"
+        } else {
+            binding.tvTicketCount.text = "📋 Showing $filteredCount of $totalCount Ticket(s)"
         }
     }
 
@@ -200,6 +346,8 @@ class HomeFragment : Fragment() {
             rvDccTickets.visibility = View.VISIBLE
             tvDccTitle.visibility = View.VISIBLE
             tvTicketCount.visibility = View.VISIBLE
+            // ✅ CHANGE 3: Show filter controls
+            filterControlsLayout.visibility = View.VISIBLE
         }
     }
 
@@ -209,6 +357,8 @@ class HomeFragment : Fragment() {
             rvDccTickets.visibility = View.GONE
             tvDccTitle.visibility = View.GONE
             tvTicketCount.visibility = View.GONE
+            // ✅ CHANGE 3: Hide filter controls
+            filterControlsLayout.visibility = View.GONE
         }
     }
 
@@ -225,11 +375,12 @@ class HomeFragment : Fragment() {
         binding.rvDccTickets.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = ticketAdapter
-            isNestedScrollingEnabled = false
         }
     }
 
     private fun loadDCCTickets() {
+        binding.tvTicketCount.text = "Loading tickets..."
+
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val token = SessionManager.getToken(requireContext())
@@ -239,28 +390,26 @@ class HomeFragment : Fragment() {
                     return@launch
                 }
 
-                Log.d(TAG, "🔥 Loading DCC tickets...")
-
-                val response = fetchTicketsFromAPI(token)
+                Log.d(TAG, "🔍 Fetching DCC tickets...")
+                val response = viewTicketsAPI(token)
 
                 withContext(Dispatchers.Main) {
                     if (response.success) {
-                        val activeTickets = response.tickets.filter {
-                            it.ticketStatus == "ACTIVE"
-                        }
+                        Log.d(TAG, "✅ Received ${response.tickets.size} tickets")
 
-                        Log.d(TAG, "✅ Active tickets: ${activeTickets.size}")
+                        // ✅ CHANGE 3: Store all tickets
+                        allTickets.clear()
+                        allTickets.addAll(response.tickets)
 
-                        if (activeTickets.isEmpty()) {
-                            binding.tvTicketCount.text = "No pending tickets"
-                            binding.rvDccTickets.visibility = View.GONE
-                        } else {
-                            ticketAdapter.submitList(activeTickets)
-                            binding.tvTicketCount.text = "${activeTickets.size} pending ticket(s)"
-                            binding.rvDccTickets.visibility = View.VISIBLE
+                        // Apply filters (will show all if no filters applied)
+                        applyFilters()
+
+                        if (response.tickets.isEmpty()) {
+                            binding.tvTicketCount.text = "✅ No pending tickets"
                         }
                     } else {
-                        showError(response.message)
+                        showError("Failed to load tickets: ${response.message}")
+                        binding.tvTicketCount.text = "❌ Failed to load tickets"
                     }
                 }
 
@@ -268,106 +417,170 @@ class HomeFragment : Fragment() {
                 Log.e(TAG, "❌ Error loading tickets", e)
                 withContext(Dispatchers.Main) {
                     showError("Network error: ${e.message}")
+                    binding.tvTicketCount.text = "❌ Error loading tickets"
                 }
             }
         }
     }
 
-    /**
-     * ✅ Approve Ticket
-     * - Updates master table (feeder_name, feeder_category, feeder_status, etc.)
-     * - Updates ticket status to APPROVED
-     * - For FEEDER CODE and NEW FEEDER ADDITION, new_feeder_code is required
-     */
+    /* ===============================
+       APPROVE TICKET
+    ================================ */
+
     private fun approveTicket(ticket: DCCApprovalFragment.PendingTicket, newFeederCode: String?) {
+        Log.d(TAG, "🔥 Approve clicked for ticket: ${ticket.ticketId}")
+
+        val requestJson = JSONObject().apply {
+            put("ticketId", ticket.ticketId)
+
+            // Add feeder details from classification
+            val details = ticket.detailsMap
+
+            if (details.containsKey("feederName")) {
+                put("feederName", details["feederName"])
+            }
+            if (details.containsKey("feederCode")) {
+                put("feederCode", details["feederCode"])
+            }
+            if (details.containsKey("feederCategory")) {
+                put("feederCategory", details["feederCategory"])
+            }
+
+            // Handle different classification types
+            when (ticket.ticketClassification.uppercase()) {
+                "FEEDER CODE" -> {
+                    if (newFeederCode.isNullOrBlank()) {
+                        Toast.makeText(
+                            requireContext(),
+                            "⚠️ Please enter new feeder code",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        return
+                    }
+                    put("newFeederCode", newFeederCode)
+                }
+                "FEEDER NAME" -> {
+                    if (details.containsKey("newFeederName")) {
+                        put("newFeederName", details["newFeederName"])
+                    }
+                }
+                "FEEDER CATEGORY" -> {
+                    if (details.containsKey("newFeederCategory")) {
+                        put("newFeederCategory", details["newFeederCategory"])
+                    }
+                }
+                "FEEDER STATUS" -> {
+                    if (details.containsKey("newStatus")) {
+                        put("newStatus", details["newStatus"])
+                    }
+                }
+                "NEW FEEDER ADDITION" -> {
+                    if (newFeederCode.isNullOrBlank()) {
+                        Toast.makeText(
+                            requireContext(),
+                            "⚠️ Please enter feeder code for new feeder",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        return
+                    }
+                    put("newFeederCode", newFeederCode)
+                    if (details.containsKey("newFeederName")) {
+                        put("newFeederName", details["newFeederName"])
+                    }
+                    if (details.containsKey("newFeederCategory")) {
+                        put("newFeederCategory", details["newFeederCategory"])
+                    }
+                }
+            }
+        }
+
+        Log.d(TAG, "📦 Approve Request: $requestJson")
+
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val token = SessionManager.getToken(requireContext())
 
-                Log.d(TAG, "✅ Approving ticket: ${ticket.ticketId}")
-                Log.d(TAG, "   Classification: ${ticket.ticketClassification}")
-                if (newFeederCode != null) {
-                    Log.d(TAG, "   New Feeder Code: $newFeederCode")
+                if (token.isEmpty()) {
+                    showError("Session expired")
+                    return@launch
                 }
-
-                val requestJson = JSONObject().apply {
-                    put("ticket_id", ticket.ticketId)
-                    put("dcc_remarks", "Approved by DCC")
-
-                    // ✅ Add new feeder code if provided (required for FEEDER CODE and NEW FEEDER ADDITION)
-                    if (newFeederCode != null && newFeederCode.isNotBlank()) {
-                        put("new_feeder_code", newFeederCode)
-                    }
-                }
-
-                Log.d(TAG, "📤 Approve Request: ${requestJson.toString(2)}")
 
                 val response = approveTicketAPI(token, requestJson)
 
                 withContext(Dispatchers.Main) {
                     if (response.success) {
-                        Toast.makeText(
-                            requireContext(),
-                            "✅ Ticket approved - Master updated",
-                            Toast.LENGTH_SHORT
+                        Snackbar.make(
+                            binding.root,
+                            "✅ ${response.message}",
+                            Snackbar.LENGTH_LONG
                         ).show()
-
-                        // Reload tickets
                         loadDCCTickets()
                     } else {
-                        showError("Approve failed: ${response.message}")
+                        showError("❌ Approval failed: ${response.message}")
                     }
                 }
 
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Approve error", e)
+                Log.e(TAG, "❌ Error approving ticket", e)
                 withContext(Dispatchers.Main) {
-                    showError("Error: ${e.message}")
+                    showError("Network error: ${e.message}")
                 }
             }
         }
     }
 
-    /**
-     * ✅ Reject Ticket
-     * - Only updates ticket status to REJECTED
-     * - Does NOT update master table
-     */
+    /* ===============================
+       REJECT TICKET
+    ================================ */
+
     private fun rejectTicket(ticket: DCCApprovalFragment.PendingTicket) {
+        Log.d(TAG, "❌ Reject clicked for ticket: ${ticket.ticketId}")
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Reject Ticket")
+            .setMessage("Are you sure you want to reject ticket ${ticket.ticketId}?")
+            .setPositiveButton("Yes, Reject") { _, _ ->
+                performReject(ticket)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun performReject(ticket: DCCApprovalFragment.PendingTicket) {
+        val requestJson = JSONObject().apply {
+            put("ticketId", ticket.ticketId)
+        }
+
+        Log.d(TAG, "📦 Reject Request: $requestJson")
+
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val token = SessionManager.getToken(requireContext())
 
-                Log.d(TAG, "❌ Rejecting ticket: ${ticket.ticketId}")
-
-                val requestJson = JSONObject().apply {
-                    put("ticket_id", ticket.ticketId)
-                    put("dcc_remarks", "Rejected by DCC - Needs more information")
+                if (token.isEmpty()) {
+                    showError("Session expired")
+                    return@launch
                 }
-
-                Log.d(TAG, "📤 Reject Request: ${requestJson.toString(2)}")
 
                 val response = rejectTicketAPI(token, requestJson)
 
                 withContext(Dispatchers.Main) {
                     if (response.success) {
-                        Toast.makeText(
-                            requireContext(),
-                            "❌ Ticket rejected",
-                            Toast.LENGTH_SHORT
+                        Snackbar.make(
+                            binding.root,
+                            "✅ ${response.message}",
+                            Snackbar.LENGTH_LONG
                         ).show()
-
-                        // Reload tickets
                         loadDCCTickets()
                     } else {
-                        showError("Reject failed: ${response.message}")
+                        showError("❌ Rejection failed: ${response.message}")
                     }
                 }
 
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Reject error", e)
+                Log.e(TAG, "❌ Error rejecting ticket", e)
                 withContext(Dispatchers.Main) {
-                    showError("Error: ${e.message}")
+                    showError("Network error: ${e.message}")
                 }
             }
         }
@@ -377,7 +590,7 @@ class HomeFragment : Fragment() {
        API CALLS
     ================================ */
 
-    private suspend fun fetchTicketsFromAPI(token: String): DCCApprovalFragment.TicketListResponse = withContext(Dispatchers.IO) {
+    private suspend fun viewTicketsAPI(token: String): DCCApprovalFragment.TicketListResponse = withContext(Dispatchers.IO) {
         val url = URL(VIEW_TICKETS_API)
         val connection = url.openConnection() as HttpURLConnection
 
