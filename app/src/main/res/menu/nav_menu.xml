@@ -72,9 +72,9 @@
 
     <!-- Logout Section (at bottom) -->
     <item
-        android:id="@+id/nav_logout"
-        android:icon="@drawable/ic_logout"
-        android:title="LOGOUT"
+        android:id="@+id/excel"
+        android:icon="@drawable/ic_upload"
+        android:title="UPLOAD/DOWNLOAD EXCEL"
         app:iconTint="@color/logout_icon_tint" />
 
 </menu>

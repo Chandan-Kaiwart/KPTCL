@@ -1,5 +1,6 @@
 package com.apc.kptcl.home
 
+import android.app.AlertDialog
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -9,6 +10,7 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.navOptions
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.apc.kptcl.R
 import com.apc.kptcl.databinding.FragmentHomeBinding
@@ -16,6 +18,7 @@ import com.apc.kptcl.home.users.ticket.confirmation.TicketApprovalAdapter
 import com.apc.kptcl.home.users.ticket.confirmation.DCCApprovalFragment
 import com.apc.kptcl.utils.JWTUtils
 import com.apc.kptcl.utils.SessionManager
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -27,6 +30,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
+import com.apc.kptcl.MainActivity
 
 class HomeFragment : Fragment() {
 
@@ -61,12 +65,58 @@ class HomeFragment : Fragment() {
         updateDateTime()
         displayTokenInfo()
         setupDCCFeatures()
+        setupLogoutButton()
+    }
 
-        binding.confirmationBtn.setOnClickListener {
-            findNavController().navigate(
-                R.id.action_homeFragment_to_feederConfirmation
-            )
+    /**
+     * ✅ Setup logout button
+     */
+    private fun setupLogoutButton() {
+        binding.logoutButton.setOnClickListener {
+            showLogoutConfirmation()
         }
+    }
+
+    /**
+     * ✅ Show logout confirmation dialog
+     */
+    private fun showLogoutConfirmation() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Logout")
+            .setMessage("Are you sure you want to logout?")
+            .setPositiveButton("Yes") { _, _ ->
+                performLogout()
+            }
+            .setNegativeButton("Cancel") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .setCancelable(true)
+            .show()
+    }
+
+    /**
+     * ✅ Perform logout action
+     */
+    private fun performLogout() {
+        // Get username before logout for logging
+        val username = SessionManager.getUsername(requireContext())
+
+        // Clear session
+        SessionManager.logout(requireContext())
+
+        Log.d(TAG, "User logged out: $username")
+
+        // Show logout message
+        Snackbar.make(binding.root, "Logged out successfully", Snackbar.LENGTH_SHORT).show()
+
+        // Navigate to login screen and clear back stack
+        findNavController().navigate(R.id.loginFragment, null,
+            navOptions {
+                popUpTo(R.id.nav_graph) {
+                    inclusive = true
+                }
+                launchSingleTop = true
+            })
     }
 
     private fun setupDCCFeatures() {
@@ -76,6 +126,7 @@ class HomeFragment : Fragment() {
             if (token.isEmpty()) {
                 Log.w(TAG, "No token found")
                 hideDCCSection()
+                showStationUserFeatures()
                 return
             }
 
@@ -84,6 +135,7 @@ class HomeFragment : Fragment() {
             if (payload == null) {
                 Log.e(TAG, "Failed to decode token")
                 hideDCCSection()
+                showStationUserFeatures()
                 return
             }
 
@@ -92,17 +144,54 @@ class HomeFragment : Fragment() {
             if (isDCCUser) {
                 Log.d(TAG, "✅ DCC user detected - Showing tickets")
                 showDCCSection()
+                hideStationUserFeatures()
                 setupTicketRecyclerView()
                 loadDCCTickets()
+
+                // ✅ Disable drawer for DCC users
+                disableDrawerForDCC()
             } else {
                 Log.d(TAG, "ℹ️ Non-DCC user - Hiding DCC section")
                 hideDCCSection()
+                showStationUserFeatures()
             }
 
         } catch (e: Exception) {
             Log.e(TAG, "Error setting up DCC features", e)
             hideDCCSection()
+            showStationUserFeatures()
         }
+    }
+
+    /**
+     * ✅ Disable navigation drawer for DCC users
+     */
+    private fun disableDrawerForDCC() {
+        try {
+            val mainActivity = activity as? MainActivity
+            mainActivity?.lockDrawer()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error disabling drawer", e)
+        }
+    }
+
+    /**
+     * ✅ Show features for station users
+     */
+    private fun showStationUserFeatures() {
+        binding.confirmationBtn.visibility = View.VISIBLE
+        binding.confirmationBtn.setOnClickListener {
+            findNavController().navigate(
+                R.id.action_homeFragment_to_feederConfirmation
+            )
+        }
+    }
+
+    /**
+     * ✅ Hide features for DCC users
+     */
+    private fun hideStationUserFeatures() {
+        binding.confirmationBtn.visibility = View.GONE
     }
 
     private fun showDCCSection() {
@@ -302,13 +391,13 @@ class HomeFragment : Fragment() {
             }
 
             val responseCode = connection.responseCode
-            Log.d(TAG, "📥 View Tickets Response Code: $responseCode")
+            Log.d(TAG, "🔥 View Tickets Response Code: $responseCode")
 
             if (responseCode == HttpURLConnection.HTTP_OK) {
                 val response = BufferedReader(InputStreamReader(connection.inputStream)).use {
                     it.readText()
                 }
-                Log.d(TAG, "📥 View Tickets Response: $response")
+                Log.d(TAG, "🔥 View Tickets Response: $response")
                 parseTicketsResponse(response)
             } else {
                 val errorBody = try {
@@ -345,13 +434,13 @@ class HomeFragment : Fragment() {
             }
 
             val responseCode = connection.responseCode
-            Log.d(TAG, "📥 Approve Response Code: $responseCode")
+            Log.d(TAG, "🔥 Approve Response Code: $responseCode")
 
             if (responseCode == HttpURLConnection.HTTP_OK) {
                 val response = BufferedReader(InputStreamReader(connection.inputStream)).use {
                     it.readText()
                 }
-                Log.d(TAG, "📥 Approve Response: $response")
+                Log.d(TAG, "🔥 Approve Response: $response")
                 parseActionResponse(response)
             } else {
                 val errorBody = try {
@@ -388,13 +477,13 @@ class HomeFragment : Fragment() {
             }
 
             val responseCode = connection.responseCode
-            Log.d(TAG, "📥 Reject Response Code: $responseCode")
+            Log.d(TAG, "🔥 Reject Response Code: $responseCode")
 
             if (responseCode == HttpURLConnection.HTTP_OK) {
                 val response = BufferedReader(InputStreamReader(connection.inputStream)).use {
                     it.readText()
                 }
-                Log.d(TAG, "📥 Reject Response: $response")
+                Log.d(TAG, "🔥 Reject Response: $response")
                 parseActionResponse(response)
             } else {
                 val errorBody = try {
@@ -520,6 +609,7 @@ class HomeFragment : Fragment() {
             Log.e(TAG, "Error displaying token info", e)
         }
     }
+
 
     private fun updateDateTime() {
         val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())

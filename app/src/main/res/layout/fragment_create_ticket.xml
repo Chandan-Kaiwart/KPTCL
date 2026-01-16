@@ -199,39 +199,7 @@
                         </com.google.android.material.textfield.TextInputLayout>
                     </LinearLayout>
 
-                    <!-- Classification -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:orientation="vertical">
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="CLASSIFICATION:"
-                            android:textColor="@color/error_red"
-                            android:textSize="12sp"
-                            android:textStyle="bold" />
-
-                        <com.google.android.material.textfield.TextInputLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
-                            app:boxStrokeColor="@color/black"
-                            app:hintTextColor="@color/black">
-
-                            <AutoCompleteTextView
-                                android:id="@+id/actvClassification"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:textColor="@color/black"
-                                android:hint="Select classification"
-                                android:inputType="none"
-                                android:textSize="12sp" />
-                        </com.google.android.material.textfield.TextInputLayout>
-                    </LinearLayout>
 
                     <!-- Feeder Name (pre-filled) -->
                     <LinearLayout
@@ -296,6 +264,40 @@
                                 android:layout_height="wrap_content"
                                 android:textColor="@color/black"
                                 android:hint="Select feeder category"
+                                android:inputType="none"
+                                android:textSize="12sp" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+
+                    <!-- Classification -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="TICKET CLASSIFICATION:"
+                            android:textColor="@color/error_red"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
+                            app:boxStrokeColor="@color/black"
+                            app:hintTextColor="@color/black">
+
+                            <AutoCompleteTextView
+                                android:id="@+id/actvClassification"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:textColor="@color/black"
+                                android:hint="Select classification"
                                 android:inputType="none"
                                 android:textSize="12sp" />
                         </com.google.android.material.textfield.TextInputLayout>

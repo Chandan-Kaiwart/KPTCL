@@ -18,7 +18,6 @@ import androidx.activity.OnBackPressedCallback
 import androidx.core.content.ContextCompat
 import androidx.navigation.navOptions
 import com.apc.kptcl.utils.SessionManager
-import com.google.android.material.snackbar.Snackbar
 
 class MainActivity : AppCompatActivity() {
 
@@ -114,6 +113,7 @@ class MainActivity : AppCompatActivity() {
         // Update navigation header with user info
         updateNavigationHeader()
         colorDrawerHeadings()
+
         binding.navigationView.setNavigationItemSelectedListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.nav_home -> {
@@ -168,16 +168,13 @@ class MainActivity : AppCompatActivity() {
                         })
                 }
                 R.id.createTicket -> {
-
                     navController.navigate(R.id.CreateTicketFragment, null,
                         navOptions {
-
                             popUpTo(R.id.homeFragment) {
                                 inclusive = false
                             }
                         })
                     Toast.makeText(this, "This feature will come soon", Toast.LENGTH_LONG).show()
-
                 }
                 R.id.viewTickets -> {
                     navController.navigate(R.id.viewTicketsFragment, null,
@@ -187,20 +184,22 @@ class MainActivity : AppCompatActivity() {
                             }
                         })
                     Toast.makeText(this, "This feature will come soon", Toast.LENGTH_LONG).show()
-
                 }
-
-
-                R.id.nav_logout -> {
-                    // Handle logout
-                    showLogoutConfirmation()
-                    return@setNavigationItemSelectedListener true
+                R.id.excel -> {
+                    navController.navigate(R.id.excelDownload, null,
+                        navOptions {
+                            popUpTo(R.id.homeFragment) {
+                                inclusive = false
+                            }
+                        })
+                    Toast.makeText(this, "This feature will come soon", Toast.LENGTH_LONG).show()
                 }
             }
             binding.drawerLayout.closeDrawer(GravityCompat.START)
             true
         }
     }
+
     private fun colorDrawerHeadings() {
         val menu = binding.navigationView.menu
 
@@ -262,46 +261,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showLogoutConfirmation() {
-        AlertDialog.Builder(this)
-            .setTitle("Logout")
-            .setMessage("Are you sure you want to logout?")
-            .setPositiveButton("Yes") { _, _ ->
-                performLogout()
-            }
-            .setNegativeButton("Cancel") { dialog, _ ->
-                dialog.dismiss()
-            }
-            .setCancelable(true)
-            .show()
-    }
-
-    private fun performLogout() {
-        // Get username before logout for logging
-        val username = SessionManager.getUsername(this)
-
-        // Clear session
-        SessionManager.logout(this)
-
-        Log.d(TAG, "User logged out: $username")
-
-        // Close drawer if open
-        if (binding.drawerLayout.isDrawerOpen(GravityCompat.START)) {
-            binding.drawerLayout.closeDrawer(GravityCompat.START)
-        }
-
-        // Show logout message
-        Snackbar.make(binding.root, "Logged out successfully", Snackbar.LENGTH_SHORT).show()
-
-        // Navigate to login screen and clear back stack
-        navController.navigate(R.id.loginFragment, null,
-            navOptions {
-                popUpTo(R.id.nav_graph) {
-                    inclusive = true
-                }
-                launchSingleTop = true
-            })
-    }
+    // ❌ Removed showLogoutConfirmation() - Now in HomeFragment
+    // ❌ Removed performLogout() - Now in HomeFragment
 
     private fun setupBackPressHandler() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -355,17 +316,22 @@ class MainActivity : AppCompatActivity() {
                     )
                 }
                 else -> {
-                    // Show toolbar and enable drawer for all other screens
+                    // Show toolbar for all other screens
                     binding.toolbar.visibility = View.VISIBLE
-                    binding.drawerLayout.setDrawerLockMode(
-                        androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_UNLOCKED
-                    )
+
+                    // ✅ Check if DCC user - don't unlock drawer automatically
+                    // Let HomeFragment handle drawer state for DCC users
+                    if (!isDCCUserLoggedIn()) {
+                        binding.drawerLayout.setDrawerLockMode(
+                            androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_UNLOCKED
+                        )
+
+                        // Reapply hamburger icon customization
+                        customizeHamburgerIcon()
+                    }
 
                     // Update header whenever we navigate to a screen with drawer visible
                     updateNavigationHeader()
-
-                    // Reapply hamburger icon customization after visibility changes
-                    customizeHamburgerIcon()
 
                     // IMPORTANT: Ensure white background remains after navigation
                     binding.navigationView.setBackgroundColor(
@@ -375,6 +341,46 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    /**
+     * ✅ Check if DCC user is logged in
+     */
+    private fun isDCCUserLoggedIn(): Boolean {
+        return try {
+            val token = SessionManager.getToken(this)
+            if (token.isEmpty()) return false
+
+            val payload = com.apc.kptcl.utils.JWTUtils.decodeToken(token)
+            payload?.role?.lowercase() == "dcc"
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking DCC user", e)
+            false
+        }
+    }
+
+    /**
+     * ✅ Lock drawer (called from HomeFragment for DCC users)
+     */
+    fun lockDrawer() {
+        binding.drawerLayout.setDrawerLockMode(
+            androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_LOCKED_CLOSED
+        )
+        // Hide hamburger icon
+        supportActionBar?.setDisplayHomeAsUpEnabled(false)
+        toggle.isDrawerIndicatorEnabled = false
+    }
+
+    /**
+     * ✅ Unlock drawer (if needed later)
+     */
+    fun unlockDrawer() {
+        binding.drawerLayout.setDrawerLockMode(
+            androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_UNLOCKED
+        )
+        // Show hamburger icon
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        toggle.isDrawerIndicatorEnabled = true
     }
 
     override fun onSupportNavigateUp(): Boolean {

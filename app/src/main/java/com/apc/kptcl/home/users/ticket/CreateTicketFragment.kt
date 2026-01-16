@@ -79,8 +79,7 @@ class CreateTicketFragment : Fragment() {
                 "FEEDER NAME",
                 "FEEDER CATEGORY",
                 "FEEDER STATUS",
-                "NEW FEEDER ADDITION",
-                "GENERAL TICKET"
+                "NEW FEEDER ADDITION"
             )
         } else {
             arrayOf("GENERAL TICKET")

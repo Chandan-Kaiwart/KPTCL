@@ -6,13 +6,11 @@ plugins {
 
 android {
     namespace = "com.apc.kptcl"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36  // ✅ FIXED
 
     defaultConfig {
         applicationId = "com.apc.kptcl"
-        minSdk = 24
+        minSdk = 26  // ✅ FIXED: Changed from 24 to 26 (required for Apache POI)
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -40,6 +38,23 @@ android {
         viewBinding = true
         dataBinding = true
     }
+
+    // ✅ ADD THIS: Packaging options to exclude duplicate files
+    packagingOptions {
+        resources {
+            excludes += setOf(
+                "META-INF/DEPENDENCIES",
+                "META-INF/LICENSE",
+                "META-INF/LICENSE.txt",
+                "META-INF/license.txt",
+                "META-INF/NOTICE",
+                "META-INF/NOTICE.txt",
+                "META-INF/notice.txt",
+                "META-INF/ASL2.0",
+                "META-INF/*.kotlin_module"
+            )
+        }
+    }
 }
 
 dependencies {
@@ -62,5 +77,13 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
 
+    // Apache POI for Excel operations
+    implementation("org.apache.poi:poi:5.2.3")
+    implementation("org.apache.poi:poi-ooxml:5.2.3")
 
+    // OkHttp for file uploads
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    // Material Design (file picker)
+    implementation("com.google.android.material:material:1.11.0")
 }

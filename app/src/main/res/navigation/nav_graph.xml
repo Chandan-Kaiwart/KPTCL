@@ -26,6 +26,13 @@
     </fragment>
 
     <fragment
+        android:id="@+id/excelDownload"
+        android:name="com.apc.kptcl.home.users.upload.ExcelDownloadFragment"
+        android:label="Excel Download"
+        tools:layout="@layout/fragment_excel_download"
+        />
+
+    <fragment
         android:id="@+id/reportFragment"
         android:name="com.apc.kptcl.home.DataValidatorFragment"
         android:label="Report"
@@ -107,6 +114,9 @@
         <action
             android:id="@+id/action_homeFragment_to_reportFragment"
             app:destination="@id/reportFragment" />
+        <action
+            android:id="@+id/action_homeFragment_to_excelDownload"
+            app:destination="@id/excelDownload" />
     </fragment>
 
     <fragment
