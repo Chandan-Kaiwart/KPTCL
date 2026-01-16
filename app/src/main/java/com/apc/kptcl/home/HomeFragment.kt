@@ -133,6 +133,7 @@ class HomeFragment : Fragment() {
                 Log.w(TAG, "No token found")
                 hideDCCSection()
                 showStationUserFeatures()
+                enableDrawerForStationUsers()  // ✅ Enable drawer for station users
                 return
             }
 
@@ -142,6 +143,7 @@ class HomeFragment : Fragment() {
                 Log.e(TAG, "Failed to decode token")
                 hideDCCSection()
                 showStationUserFeatures()
+                enableDrawerForStationUsers()  // ✅ Enable drawer for station users
                 return
             }
 
@@ -161,12 +163,16 @@ class HomeFragment : Fragment() {
                 Log.d(TAG, "ℹ️ Non-DCC user - Hiding DCC section")
                 hideDCCSection()
                 showStationUserFeatures()
+
+                // ✅ Enable drawer for station users
+                enableDrawerForStationUsers()
             }
 
         } catch (e: Exception) {
             Log.e(TAG, "Error setting up DCC features", e)
             hideDCCSection()
             showStationUserFeatures()
+            enableDrawerForStationUsers()  // ✅ Enable drawer for station users
         }
     }
 
@@ -316,8 +322,22 @@ class HomeFragment : Fragment() {
         try {
             val mainActivity = activity as? MainActivity
             mainActivity?.lockDrawer()
+            Log.d(TAG, "🔒 Drawer locked for DCC user")
         } catch (e: Exception) {
             Log.e(TAG, "Error disabling drawer", e)
+        }
+    }
+
+    /**
+     * ✅ FIX: Enable navigation drawer for station users
+     */
+    private fun enableDrawerForStationUsers() {
+        try {
+            val mainActivity = activity as? MainActivity
+            mainActivity?.unlockDrawer()
+            Log.d(TAG, "🔓 Drawer unlocked for station user")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error enabling drawer", e)
         }
     }
 

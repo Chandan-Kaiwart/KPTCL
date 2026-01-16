@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<!-- ✅ FIX: Using FrameLayout as root to allow proper scrolling and overlay -->
+<FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -8,20 +9,16 @@
     android:background="@drawable/gradient_background"
     tools:ignore="MissingClass">
 
-    <!-- ScrollView wrapping all content -->
-    <ScrollView
+    <!-- ✅ FIX: ScrollView fills entire screen for proper keyboard handling -->
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:fillViewport="true"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/tvSuccessMessage"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        android:layout_height="match_parent"
+        android:fillViewport="true">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingBottom="24dp">
+            android:paddingBottom="120dp">
 
             <!-- Logo -->
             <ImageView
@@ -424,19 +421,19 @@
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 
-    <!-- Success Snackbar (shown at bottom when captcha verified) -->
+    <!-- ✅ Success Message overlays at bottom using FrameLayout gravity -->
     <TextView
         android:id="@+id/tvSuccessMessage"
         android:layout_width="match_parent"
         android:layout_height="48dp"
+        android:layout_gravity="bottom"
         android:background="@color/green_500"
         android:gravity="center"
         android:text="Captcha verified successfully!"
         android:textColor="@android:color/white"
         android:textSize="14sp"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent" />
+        android:visibility="gone" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+</FrameLayout>

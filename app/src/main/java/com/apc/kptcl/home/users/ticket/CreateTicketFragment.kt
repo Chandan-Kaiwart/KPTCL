@@ -89,7 +89,8 @@ class CreateTicketFragment : Fragment() {
             ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, classifications)
         )
 
-        // Feeder Categories (for display only - pre-filled)
+        // ✅ FIX: Removed adapter for existing feeder category (now TextInputEditText, not AutoCompleteTextView)
+        // Feeder Categories for NEW category dropdown only
         val feederCategories = arrayOf(
             "AGRICULTURE",
             "INDUSTRIAL",
@@ -97,9 +98,6 @@ class CreateTicketFragment : Fragment() {
             "RURAL",
             "URBAN",
             "WATERSUPPLY"
-        )
-        binding.actvFeederCategory.setAdapter(
-            ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, feederCategories)
         )
 
         // New Feeder Category dropdown (for changing category)
@@ -120,15 +118,15 @@ class CreateTicketFragment : Fragment() {
 
         // ✅ CHANGE 1: Disable both feeder name AND category if from confirmation
         if (isFromFeederConfirmation) {
-            binding.actvFeederName.isEnabled = false
-            binding.actvFeederCategory.isEnabled = false  // ✅ Non-editable category
+            binding.etFeederName.isEnabled = false
+            binding.etFeederCategory.isEnabled = false  // ✅ Non-editable category
 
             // Set text color to indicate disabled state
-            binding.actvFeederName.setTextColor(resources.getColor(android.R.color.darker_gray, null))
-            binding.actvFeederCategory.setTextColor(resources.getColor(android.R.color.darker_gray, null))
+            binding.etFeederName.setTextColor(resources.getColor(android.R.color.black, null))
+            binding.etFeederCategory.setTextColor(resources.getColor(android.R.color.black, null))
         } else {
-            binding.actvFeederName.isEnabled = false
-            binding.actvFeederCategory.isEnabled = false
+            binding.etFeederName.isEnabled = false
+            binding.etFeederCategory.isEnabled = false
         }
     }
 
@@ -209,11 +207,11 @@ class CreateTicketFragment : Fragment() {
         binding.etStartDateTime.setText(getCurrentDateTime())
         binding.etTicketStatus.setText("ACTIVE")
 
-        // ✅ Pre-fill feeder data (name and category)
+        // ✅ Pre-fill feeder data (name and category) - TextInputEditText doesn't need false parameter
         // Note: Feeder code is not displayed in a separate field, only stored internally
         if (isFromFeederConfirmation) {
-            binding.actvFeederName.setText(passedFeederName, false)
-            binding.actvFeederCategory.setText(passedFeederCategory, false)
+            binding.etFeederName.setText(passedFeederName)
+            binding.etFeederCategory.setText(passedFeederCategory)
             // passedFeederCode is stored for API submission but not displayed
         }
     }

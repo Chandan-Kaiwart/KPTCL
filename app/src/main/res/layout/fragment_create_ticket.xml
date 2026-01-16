@@ -201,7 +201,7 @@
 
 
 
-                    <!-- Feeder Name (pre-filled) -->
+                    <!-- ✅ EXISTING Feeder Name (non-editable text field) -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -211,7 +211,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="FEEDER NAME:"
+                            android:text="EXISTING FEEDER NAME:"
                             android:textColor="@color/error_red"
                             android:textSize="12sp"
                             android:textStyle="bold" />
@@ -220,22 +220,22 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense"
                             app:boxStrokeColor="@color/black"
                             app:hintTextColor="@color/black">
 
-                            <AutoCompleteTextView
-                                android:id="@+id/actvFeederName"
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etFeederName"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:textColor="@color/black"
                                 android:hint="Feeder name"
-                                android:inputType="none"
+                                android:enabled="false"
                                 android:textSize="12sp" />
                         </com.google.android.material.textfield.TextInputLayout>
                     </LinearLayout>
 
-                    <!-- Feeder Category (pre-filled) -->
+                    <!-- ✅ EXISTING Feeder Category (non-editable text field) -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -245,7 +245,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="FEEDER CATEGORY:"
+                            android:text="EXISTING FEEDER CATEGORY:"
                             android:textColor="@color/error_red"
                             android:textSize="12sp"
                             android:textStyle="bold" />
@@ -254,17 +254,17 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense.ExposedDropdownMenu"
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense"
                             app:boxStrokeColor="@color/black"
                             app:hintTextColor="@color/black">
 
-                            <AutoCompleteTextView
-                                android:id="@+id/actvFeederCategory"
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etFeederCategory"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:textColor="@color/black"
-                                android:hint="Select feeder category"
-                                android:inputType="none"
+                                android:hint="Feeder category"
+                                android:enabled="false"
                                 android:textSize="12sp" />
                         </com.google.android.material.textfield.TextInputLayout>
                     </LinearLayout>

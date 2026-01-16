@@ -130,6 +130,24 @@ class LoginFragment : Fragment() {
     }
 
     private fun setupClickListeners() {
+        // ✅ FIX: Scroll to captcha field when it gets focus
+        binding.etCaptcha.setOnFocusChangeListener { view, hasFocus ->
+            if (hasFocus) {
+                // Post with delay to ensure keyboard is shown
+                view.postDelayed({
+                    // Find the ScrollView (parent of parent of parent...)
+                    var parent = view.parent
+                    while (parent != null && parent !is android.widget.ScrollView) {
+                        parent = parent.parent
+                    }
+                    (parent as? android.widget.ScrollView)?.apply {
+                        // Scroll to show the captcha field and login button
+                        smoothScrollTo(0, view.bottom + 200)
+                    }
+                }, 300) // Wait 300ms for keyboard animation
+            }
+        }
+
         // Password toggle button
         binding.btnTogglePassword.setOnClickListener {
             togglePasswordVisibility()
