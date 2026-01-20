@@ -54,9 +54,9 @@ class DailyEditFragment : Fragment() {
 
     companion object {
         private const val TAG = "DailyEdit"
-        private const val FEEDER_LIST_URL = "http://62.72.59.119:5000/api/feeder/list"
-        private const val FETCH_URL = "http://62.72.59.119:4008/api/feeder/consumption/edit/fetch"
-        private const val SAVE_URL = "http://62.72.59.119:4008/api/feeder/consumption/edit/save"
+        private const val FEEDER_LIST_URL = "http://62.72.59.119:7000/api/feeder/list"
+        private const val FETCH_URL = "http://62.72.59.119:7000/api/feeder/consumption/edit/fetch"
+        private const val SAVE_URL = "http://62.72.59.119:7000/api/feeder/consumption/edit/save"
         private const val TIMEOUT = 15000
     }
 

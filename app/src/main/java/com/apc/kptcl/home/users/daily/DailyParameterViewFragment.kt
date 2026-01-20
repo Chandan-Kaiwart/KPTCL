@@ -55,8 +55,8 @@ class DailyParameterViewFragment : Fragment() {
     companion object {
         private const val TAG = "DailyParameterView"
         private const val API_BASE_URL = "http://62.72.59.119"
-        private const val FEEDER_LIST_URL = "$API_BASE_URL:5000/api/feeder/list"
-        private const val CONSUMPTION_URL = "$API_BASE_URL:4000/api/feeder/consumption"
+        private const val FEEDER_LIST_URL = "$API_BASE_URL:7000/api/feeder/list"
+        private const val CONSUMPTION_URL = "$API_BASE_URL:7000/api/feeder/consumption"
     }
 
     override fun onCreateView(

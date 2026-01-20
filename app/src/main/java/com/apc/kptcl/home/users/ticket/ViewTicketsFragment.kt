@@ -33,7 +33,7 @@ class ViewTicketsFragment : Fragment() {
     companion object {
         private const val TAG = "ViewTicketsFragment"
         // Ticket API is on port 5015, not 5010 (login port)
-        private const val TICKET_API_BASE_URL = "http://62.72.59.119:5015/"
+        private const val TICKET_API_BASE_URL = "http://62.72.59.119:7000/"
     }
 
     // API setup - using ticket API server

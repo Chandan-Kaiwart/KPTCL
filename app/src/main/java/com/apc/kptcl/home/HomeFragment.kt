@@ -48,11 +48,11 @@ class HomeFragment : Fragment() {
 
     companion object {
         private const val TAG = "HomeFragment"
-        private const val VIEW_TICKETS_API = "http://62.72.59.119:5015/api/feeder/ticket/view/all"
+        private const val VIEW_TICKETS_API = "http://62.72.59.119:7000/api/feeder/ticket/view/all"
         // ✅ Approve API - Updates both master and ticket status (PORT 5018)
-        private const val APPROVE_API = "http://62.72.59.119:5018/api/dcc/ticket/approve"
+        private const val APPROVE_API = "http://62.72.59.119:7000/api/dcc/ticket/approve"
         // ✅ Reject API - Only updates ticket status (PORT 5018)
-        private const val REJECT_API = "http://62.72.59.119:5018/api/dcc/ticket/reject"
+        private const val REJECT_API = "http://62.72.59.119:7000/api/dcc/ticket/reject"
         private const val TIMEOUT = 15000
     }
 
@@ -155,6 +155,7 @@ class HomeFragment : Fragment() {
                 hideStationUserFeatures()
                 setupTicketRecyclerView()
                 setupFilters()  // ✅ CHANGE 3: Setup filters
+                setupDCCReportsButton()  // ✅ NEW: Setup Reports button for DCC
                 loadDCCTickets()
 
                 // ✅ Disable drawer for DCC users
@@ -176,6 +177,22 @@ class HomeFragment : Fragment() {
         }
     }
 
+
+    /**
+     * ✅ NEW: Setup Reports button for DCC users
+     */
+    private fun setupDCCReportsButton() {
+        binding.dccReportsBtn.visibility = View.VISIBLE
+        binding.dccReportsBtn.setOnClickListener {
+            try {
+                findNavController().navigate(R.id.action_homeFragment_to_reportFragment)
+                Log.d(TAG, "Navigating to Reports Fragment")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error navigating to Reports", e)
+                Toast.makeText(requireContext(), "Unable to open Reports", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
     /**
      * ✅ CHANGE 3: Setup filter functionality
      */
@@ -379,6 +396,7 @@ class HomeFragment : Fragment() {
             tvTicketCount.visibility = View.GONE
             // ✅ CHANGE 3: Hide filter controls
             filterControlsLayout.visibility = View.GONE
+            dccReportsBtn.visibility = View.GONE  // ✅ NEW: Hide Reports button
         }
     }
 

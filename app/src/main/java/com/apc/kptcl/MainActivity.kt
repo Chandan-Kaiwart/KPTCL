@@ -35,12 +35,29 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Enable edge-to-edge display and handle status bar properly
+        enableEdgeToEdge()
+
         binding.toolbar.visibility = View.VISIBLE
 
         setupNavigation()
         setupNavigationDrawer()
         handleDrawerVisibility()
         setupBackPressHandler()
+    }
+
+    /**
+     * Enable edge-to-edge display and set proper window insets
+     */
+    private fun enableEdgeToEdge() {
+        // Make status bar transparent
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+
+        // Set status bar icons to dark (visible on light backgrounds)
+        @Suppress("DEPRECATION")
+        window.decorView.systemUiVisibility =
+            View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
     }
 
     private fun setupNavigation() {
@@ -230,16 +247,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun customizeHamburgerIcon() {
-        // Increase toolbar content inset to make hamburger icon more clickable
-        binding.toolbar.setContentInsetsAbsolute(0, 0)
-
         // Set custom hamburger icon color to make it more visible
         val icon = toggle.drawerArrowDrawable
         icon.color = ContextCompat.getColor(this, android.R.color.white)
 
-        // Increase the size of the hamburger icon for better visibility
-        // You can adjust these padding values to change the clickable area
-        binding.toolbar.setPadding(16, 0, 0, 0)
+        // Properly set content insets for better spacing
+        // This ensures the hamburger icon has proper margins from screen edges
+        binding.toolbar.setContentInsetsAbsolute(16, 0)
     }
 
     private fun updateNavigationHeader() {

@@ -1,13 +1,28 @@
 package com.apc.kptcl.home
 
+import android.Manifest
+import android.app.DownloadManager
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.Settings
 import android.text.InputType
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -20,6 +35,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.BufferedReader
+import java.io.File
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
@@ -35,6 +51,9 @@ class LoginFragment : Fragment() {
     private var isCaptchaVerified = false
     private var isPasswordVisible = false
 
+    private var downloadId: Long = -1
+    private var downloadReceiver: BroadcastReceiver? = null
+
     private val escomList = listOf(
         "BESCOM",
         "HESCOM",
@@ -45,7 +64,34 @@ class LoginFragment : Fragment() {
 
     companion object {
         private const val TAG = "LoginFragment"
-        private const val BASE_URL = "http://62.72.59.119:5010"
+        private const val BASE_URL = "http://62.72.59.119:7000"
+        private const val APK_DOWNLOAD_URL = "https://api.vidyut-suvidha.in/apk"
+        private const val APK_FILE_NAME = "KPTCL_App_Latest.apk"
+    }
+
+    // ✅ Permission launcher for storage access (Android < 13)
+    private val storagePermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            startAPKDownload()
+        } else {
+            Toast.makeText(context, "Storage permission required to download APK", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    // ✅ Install permission launcher (Android 8+)
+    private val installPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { _ ->
+        // After user grants install permission, check again
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (requireContext().packageManager.canRequestPackageInstalls()) {
+                Log.d(TAG, "Install permission granted")
+            } else {
+                Toast.makeText(context, "Install permission required to update app", Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     override fun onCreateView(
@@ -64,6 +110,7 @@ class LoginFragment : Fragment() {
         generateCaptcha()
         setupClickListeners()
         checkExistingSession()
+        setupDownloadReceiver()
     }
 
     private fun checkExistingSession() {
@@ -95,19 +142,16 @@ class LoginFragment : Fragment() {
         )
         binding.actvEscom.setAdapter(adapter)
 
-        // Dropdown automatically show karne ke liye
         binding.actvEscom.setOnClickListener {
             binding.actvEscom.showDropDown()
         }
 
-        // Keyboard hide karne ke liye
         binding.actvEscom.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
                 binding.actvEscom.showDropDown()
             }
         }
 
-        // Threshold set karein (minimum characters to show dropdown)
         binding.actvEscom.threshold = 1
     }
 
@@ -130,25 +174,20 @@ class LoginFragment : Fragment() {
     }
 
     private fun setupClickListeners() {
-        // ✅ FIX: Scroll to captcha field when it gets focus
         binding.etCaptcha.setOnFocusChangeListener { view, hasFocus ->
             if (hasFocus) {
-                // Post with delay to ensure keyboard is shown
                 view.postDelayed({
-                    // Find the ScrollView (parent of parent of parent...)
                     var parent = view.parent
                     while (parent != null && parent !is android.widget.ScrollView) {
                         parent = parent.parent
                     }
                     (parent as? android.widget.ScrollView)?.apply {
-                        // Scroll to show the captcha field and login button
                         smoothScrollTo(0, view.bottom + 200)
                     }
-                }, 300) // Wait 300ms for keyboard animation
+                }, 300)
             }
         }
 
-        // Password toggle button
         binding.btnTogglePassword.setOnClickListener {
             togglePasswordVisibility()
         }
@@ -165,25 +204,223 @@ class LoginFragment : Fragment() {
             attemptLogin()
         }
 
-//        binding.tvRaiseTicket.setOnClickListener {
-//            Snackbar.make(binding.root, "Raise ticket feature coming soon", Snackbar.LENGTH_SHORT).show()
-//        }
+        // ✅ APK Download Button
+        binding.apkDownload.setOnClickListener {
+            downloadLatestAPK()
+        }
+    }
+
+    // ✅ APK Download Function
+    private fun downloadLatestAPK() {
+        Log.d(TAG, "📥 APK Download button clicked")
+
+        // Show confirmation dialog
+        AlertDialog.Builder(requireContext())
+            .setTitle("Download Latest APK")
+            .setMessage("Do you want to download and install the latest version of KPTCL App?")
+            .setPositiveButton("Download") { _, _ ->
+                checkPermissionsAndDownload()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun checkPermissionsAndDownload() {
+        when {
+            // ✅ Android 13+ (API 33+) - No storage permission needed
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
+                Log.d(TAG, "Android 13+: No storage permission needed")
+                startAPKDownload()
+            }
+
+            // ✅ Android 11-12 (API 30-32) - Scoped storage, no permission needed
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> {
+                Log.d(TAG, "Android 11-12: Using scoped storage")
+                startAPKDownload()
+            }
+
+            // ✅ Android 6-10 (API 23-29) - Need WRITE_EXTERNAL_STORAGE
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
+                if (ContextCompat.checkSelfPermission(
+                        requireContext(),
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE
+                    ) == PackageManager.PERMISSION_GRANTED
+                ) {
+                    startAPKDownload()
+                } else {
+                    storagePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                }
+            }
+
+            // ✅ Android 5 and below - Direct download
+            else -> {
+                startAPKDownload()
+            }
+        }
+    }
+
+    private fun startAPKDownload() {
+        try {
+            Log.d(TAG, "🚀 Starting APK download from: $APK_DOWNLOAD_URL")
+
+            // Delete old APK if exists
+            val apkFile = File(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                APK_FILE_NAME
+            )
+            if (apkFile.exists()) {
+                apkFile.delete()
+                Log.d(TAG, "🗑️ Deleted old APK file")
+            }
+
+            // Configure download request
+            val request = DownloadManager.Request(Uri.parse(APK_DOWNLOAD_URL)).apply {
+                setTitle("KPTCL App Update")
+                setDescription("Downloading latest version...")
+                setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, APK_FILE_NAME)
+                setMimeType("application/vnd.android.package-archive")
+                setAllowedOverMetered(true)
+                setAllowedOverRoaming(true)
+            }
+
+            // Start download
+            val downloadManager = requireContext().getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+            downloadId = downloadManager.enqueue(request)
+
+            Log.d(TAG, "✅ Download started with ID: $downloadId")
+
+            Toast.makeText(
+                context,
+                "📥 Downloading latest APK... Please wait",
+                Toast.LENGTH_LONG
+            ).show()
+
+            // Disable button during download
+            binding.apkDownload.isEnabled = false
+            binding.apkDownload.text = "Downloading..."
+
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Download error: ${e.message}", e)
+            Toast.makeText(
+                context,
+                "Download failed: ${e.message}",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    private fun setupDownloadReceiver() {
+        downloadReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                val id = intent?.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1) ?: -1
+
+                if (id == downloadId) {
+                    Log.d(TAG, "✅ Download completed for ID: $downloadId")
+
+                    // Re-enable button
+                    binding.apkDownload.isEnabled = true
+                    binding.apkDownload.text = "Click Here To Download Latest APK"
+
+                    Toast.makeText(
+                        context,
+                        "✅ APK Downloaded! Installing...",
+                        Toast.LENGTH_LONG
+                    ).show()
+
+                    // Install APK
+                    installAPK()
+                }
+            }
+        }
+
+        // Register receiver
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requireContext().registerReceiver(
+                downloadReceiver,
+                IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
+                Context.RECEIVER_NOT_EXPORTED
+            )
+        } else {
+            requireContext().registerReceiver(
+                downloadReceiver,
+                IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
+            )
+        }
+    }
+
+    private fun installAPK() {
+        try {
+            val apkFile = File(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                APK_FILE_NAME
+            )
+
+            if (!apkFile.exists()) {
+                Log.e(TAG, "❌ APK file not found: ${apkFile.absolutePath}")
+                Toast.makeText(context, "APK file not found", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            Log.d(TAG, "📦 Installing APK from: ${apkFile.absolutePath}")
+
+            // ✅ Check install permission for Android 8+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (!requireContext().packageManager.canRequestPackageInstalls()) {
+                    Log.w(TAG, "⚠️ Install permission not granted, requesting...")
+
+                    // Request install permission
+                    val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                        data = Uri.parse("package:${requireContext().packageName}")
+                    }
+                    installPermissionLauncher.launch(intent)
+                    return
+                }
+            }
+
+            // ✅ Install APK
+            val apkUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                // Android 7+ (Use FileProvider)
+                FileProvider.getUriForFile(
+                    requireContext(),
+                    "${requireContext().packageName}.provider",
+                    apkFile
+                )
+            } else {
+                // Android 6 and below
+                Uri.fromFile(apkFile)
+            }
+
+            val installIntent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(apkUri, "application/vnd.android.package-archive")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+
+            startActivity(installIntent)
+            Log.d(TAG, "✅ Install intent launched")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Installation error: ${e.message}", e)
+            Toast.makeText(
+                context,
+                "Installation failed: ${e.message}",
+                Toast.LENGTH_LONG
+            ).show()
+        }
     }
 
     private fun togglePasswordVisibility() {
         isPasswordVisible = !isPasswordVisible
 
         if (isPasswordVisible) {
-            // Show password
             binding.etPassword.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
             binding.btnTogglePassword.setImageResource(R.drawable.ic_visibility)
         } else {
-            // Hide password
             binding.etPassword.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
             binding.btnTogglePassword.setImageResource(R.drawable.ic_visibility_off)
         }
 
-        // Move cursor to end
         binding.etPassword.setSelection(binding.etPassword.text?.length ?: 0)
     }
 
@@ -216,7 +453,6 @@ class LoginFragment : Fragment() {
 
         Log.d(TAG, "Attempting login - Username: $username, ESCOM: $escom")
 
-        // Clear previous errors
         var hasError = false
 
         when {
@@ -270,7 +506,6 @@ class LoginFragment : Fragment() {
                 connection.connectTimeout = 15000
                 connection.readTimeout = 15000
 
-                // Create JSON body with username, password, and escom
                 val jsonBody = JSONObject().apply {
                     put("username", username)
                     put("password", password)
@@ -279,13 +514,11 @@ class LoginFragment : Fragment() {
 
                 Log.d(TAG, "Login request body: $jsonBody")
 
-                // Send request
                 val writer = OutputStreamWriter(connection.outputStream)
                 writer.write(jsonBody.toString())
                 writer.flush()
                 writer.close()
 
-                // Get response
                 val responseCode = connection.responseCode
                 Log.d(TAG, "Login response code: $responseCode")
 
@@ -426,6 +659,16 @@ class LoginFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+
+        // ✅ Unregister download receiver
+        try {
+            downloadReceiver?.let {
+                requireContext().unregisterReceiver(it)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error unregistering receiver: ${e.message}")
+        }
+
         _binding = null
     }
 }

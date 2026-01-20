@@ -54,13 +54,12 @@ class FeederHourlyEntryFragment : Fragment() {
     private var selectedFeeder: FeederData? = null
 
     private val parameters = listOf("IB", "IR", "IY", "MW", "MVAR")
-    private val numberOfHours = 24
 
     companion object {
         private const val TAG = "HourlyEntry"
-        private const val FEEDER_LIST_URL = "http://62.72.59.119:5000/api/feeder/list"
-        private const val FETCH_URL = "http://62.72.59.119:4004/api/feeder/hourly-entry/fetch"
-        private const val SAVE_URL = "http://62.72.59.119:4004/api/feeder/hourly-entry/save"
+        private const val FEEDER_LIST_URL = "http://62.72.59.119:7000/api/feeder/list"
+        private const val FETCH_URL = "http://62.72.59.119:7000/api/feeder/hourly-entry/fetch"
+        private const val SAVE_URL = "http://62.72.59.119:7000/api/feeder/hourly-entry/save"
         private const val TIMEOUT = 15000
     }
 
@@ -124,7 +123,9 @@ class FeederHourlyEntryFragment : Fragment() {
     }
 
     private fun updateDateDisplay() {
-        binding.etDate.setText(dateFormat.format(calendar.time))
+        val selectedDate = dateFormat.format(calendar.time)
+        binding.etDate.setText(selectedDate)
+        binding.tvEntryDate.text = "FOR $selectedDate"
     }
 
     private fun fetchFeederList() {
@@ -238,95 +239,105 @@ class FeederHourlyEntryFragment : Fragment() {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 if (position < allFeeders.size) {
                     selectedFeeder = allFeeders[position]
-                    Log.d(TAG, "✅ Selected: ${selectedFeeder?.feederName}")
+                    Log.d(TAG, "📍 Selected: ${selectedFeeder?.feederName}")
                     loadFeederData()
                 }
             }
 
             override fun onNothingSelected(parent: AdapterView<*>?) {
-                Log.d(TAG, "No feeder selected")
+                selectedFeeder = null
+                adapter.clear()
             }
         }
     }
 
     private fun setupRecyclerView() {
-        layoutManager = LinearLayoutManager(context)
         adapter = HourlyDataAdapter()
+        layoutManager = LinearLayoutManager(requireContext())
 
-        binding.rvFeederData.apply {
-            this.layoutManager = this@FeederHourlyEntryFragment.layoutManager
-            this.adapter = this@FeederHourlyEntryFragment.adapter
+        binding.rvFeederData.layoutManager = layoutManager
+        binding.rvFeederData.adapter = adapter
+    }
+
+    private fun setupButtons() {
+        binding.btnSubmit.setOnClickListener {
+            submitData()
         }
     }
 
-    /**
-     * ✅ Load feeder data and auto-scroll to next empty hour
-     */
     private fun loadFeederData() {
-        if (selectedFeeder == null) return
+        val feeder = selectedFeeder ?: return
+        val date = binding.etDate.text.toString()
 
-        val feeder = selectedFeeder!!
+        if (date.isEmpty()) {
+            Toast.makeText(context, "Please select a date", Toast.LENGTH_SHORT).show()
+            return
+        }
 
-        binding.llFeederInfo.visibility = View.VISIBLE
-        binding.tvFeederInfo.text =
-            "DATE: ${dateFormat.format(calendar.time)} | " +
-                    "STATION: $stationName | " +
-                    "FEEDER: ${feeder.feederName} | " +
-                    "CODE: ${feeder.feederCode}"
-
-        showLoading(true)
+        Log.d(TAG, "🔄 Loading data for ${feeder.feederName} on $date")
 
         lifecycleScope.launch {
             try {
-                // ✅ Fetch existing data from API
-                val existingData = withContext(Dispatchers.IO) {
-                    fetchExistingData(feeder.feederCode, dateFormat.format(calendar.time))
+                val result = withContext(Dispatchers.IO) {
+                    fetchFeederData(date, feeder.feederCode)
                 }
 
-                // Build rows
-                val rows = mutableListOf<HourlyDataRow>()
+                Log.d(TAG, "✅ Received ${result.size} rows")
 
-                for (hour in 1 until numberOfHours) {
-                    val hourStr = String.format("%02d", hour)
-                    val parameters = mutableMapOf<String, String>()
+                val rowList = mutableListOf<HourlyDataRow>()
 
-                    // Fill with existing data if available
-                    this@FeederHourlyEntryFragment.parameters.forEach { param ->
-                        val existingValue = existingData[hourStr]?.get(param) ?: ""
-                        parameters[param] = existingValue
+                if (result.isNotEmpty()) {
+                    // Edit mode - parse existing data
+                    val hourMap = mutableMapOf<String, MutableMap<String, String>>()
+
+                    result.forEach { item ->
+                        val parameter = item.parameter
+                        item.hours.forEach { (hour, value) ->
+                            if (!hourMap.containsKey(hour)) {
+                                hourMap[hour] = mutableMapOf()
+                            }
+                            hourMap[hour]!![parameter] = value
+                        }
                     }
 
-                    rows.add(HourlyDataRow(hourStr, parameters))
+                    // Create rows for all 24 hours (00-23)
+                    for (hour in 0..23) {
+                        val hourKey = String.format("%02d", hour)
+                        rowList.add(
+                            HourlyDataRow(
+                                hour = hourKey,
+                                parameters = hourMap[hourKey] ?: mutableMapOf()
+                            )
+                        )
+                    }
+                } else {
+                    // New mode - empty rows
+                    for (hour in 0..23) {
+                        rowList.add(
+                            HourlyDataRow(
+                                hour = String.format("%02d", hour),
+                                parameters = mutableMapOf()
+                            )
+                        )
+                    }
                 }
 
-                adapter.submitList(rows, feeder.feederName, feeder.feederCode)
-
-                // ✅ Auto-scroll to next empty hour
-                scrollToNextEmptyHour(rows)
-
-                Log.d(TAG, "✅ Loaded data for ${feeder.feederName}")
+                adapter.submitList(rowList, feeder.feederName, feeder.feederCode)
+                Toast.makeText(context, "Data loaded", Toast.LENGTH_SHORT).show()
 
             } catch (e: Exception) {
-                Log.e(TAG, "Error loading data", e)
+                Log.e(TAG, "❌ Error loading data", e)
                 Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
-            } finally {
-                showLoading(false)
             }
         }
     }
 
-    /**
-     * ✅ Fetch existing data from backend
-     */
-    private suspend fun fetchExistingData(feederCode: String, date: String): Map<String, Map<String, String>> = withContext(Dispatchers.IO) {
+    private suspend fun fetchFeederData(date: String, feederCode: String): List<ExistingHourlyData> = withContext(Dispatchers.IO) {
+        val token = SessionManager.getToken(requireContext())
         val url = URL(FETCH_URL)
         val connection = url.openConnection() as HttpURLConnection
 
-        val resultMap = mutableMapOf<String, MutableMap<String, String>>()
-
         try {
-            val token = SessionManager.getToken(requireContext())
-
             connection.apply {
                 requestMethod = "POST"
                 connectTimeout = TIMEOUT
@@ -341,143 +352,88 @@ class FeederHourlyEntryFragment : Fragment() {
                 put("feeder_code", feederCode)
             }
 
-            OutputStreamWriter(connection.outputStream).use { it.write(requestBody.toString()) }
+            OutputStreamWriter(connection.outputStream).use { writer ->
+                writer.write(requestBody.toString())
+                writer.flush()
+            }
 
             val responseCode = connection.responseCode
 
             if (responseCode == HttpURLConnection.HTTP_OK) {
-                val response = BufferedReader(InputStreamReader(connection.inputStream)).use { it.readText() }
+                val response = BufferedReader(InputStreamReader(connection.inputStream)).use {
+                    it.readText()
+                }
+
                 val jsonResponse = JSONObject(response)
+                val dataArray = jsonResponse.optJSONArray("data") ?: JSONArray()
 
-                if (jsonResponse.optBoolean("success", false)) {
-                    val dataArray = jsonResponse.optJSONArray("data")
+                val result = mutableListOf<ExistingHourlyData>()
 
-                    if (dataArray != null) {
-                        for (i in 0 until dataArray.length()) {
-                            val row = dataArray.getJSONObject(i)
-                            val parameter = row.optString("PARAMETER", "")
+                for (i in 0 until dataArray.length()) {
+                    val item = dataArray.getJSONObject(i)
+                    val parameter = item.optString("PARAMETER", "")
 
-                            // Extract hour columns (00, 01, 02, ... 23)
-                            for (hour in 1 until numberOfHours) {
-                                val hourStr = String.format("%02d", hour)
-                                val value = row.optString(hourStr, "")
+                    val hoursMap = mutableMapOf<String, String>()
+                    val keys = item.keys()
 
-                                if (value.isNotEmpty()) {
-                                    if (!resultMap.containsKey(hourStr)) {
-                                        resultMap[hourStr] = mutableMapOf()
-                                    }
-                                    resultMap[hourStr]!![parameter] = value
-                                }
-                            }
+                    while (keys.hasNext()) {
+                        val key = keys.next()
+                        if (key.matches(Regex("\\d{2}"))) {
+                            hoursMap[key] = item.optString(key, "")
                         }
                     }
+
+                    result.add(ExistingHourlyData(parameter, hoursMap))
                 }
+
+                result
+            } else {
+                emptyList()
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error fetching existing data", e)
         } finally {
             connection.disconnect()
-        }
-
-        return@withContext resultMap
-    }
-
-    /**
-     * ✅ AUTO-SCROLL TO NEXT EMPTY HOUR
-     */
-    private fun scrollToNextEmptyHour(rows: List<HourlyDataRow>) {
-        // Find first hour that doesn't have all parameters filled
-        val firstEmptyIndex = rows.indexOfFirst { row ->
-            row.parameters.values.any { it.isEmpty() }
-        }
-
-        if (firstEmptyIndex != -1) {
-            // ✅ Scroll to position with smooth scrolling
-            binding.rvFeederData.postDelayed({
-                layoutManager.scrollToPositionWithOffset(firstEmptyIndex, 0)
-
-                Log.d(TAG, "✅ Auto-scrolled to hour: ${rows[firstEmptyIndex].hour}")
-
-                Toast.makeText(
-                    context,
-                    "📍 Next empty hour: ${rows[firstEmptyIndex].hour}:00",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }, 300) // Small delay to ensure RecyclerView is ready
-        } else {
-            // All hours filled
-            Toast.makeText(context, "✓ All hours already filled!", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun setupButtons() {
-        binding.btnSubmit.setOnClickListener {
-            submitData()
         }
     }
 
     private fun submitData() {
-        if (selectedFeeder == null) {
-            Toast.makeText(context, "Please select a feeder first", Toast.LENGTH_SHORT).show()
+        val feeder = selectedFeeder
+        if (feeder == null) {
+            Toast.makeText(context, "Please select a feeder", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val date = binding.etDate.text.toString()
+        if (date.isEmpty()) {
+            Toast.makeText(context, "Please select a date", Toast.LENGTH_SHORT).show()
             return
         }
 
         val rows = adapter.getHourlyData()
-        if (rows.isEmpty()) {
-            Toast.makeText(context, "No data to submit", Toast.LENGTH_SHORT).show()
-            return
-        }
 
-        val hasAnyData = rows.any { row ->
-            row.parameters.values.any { it.isNotEmpty() }
-        }
-
-        if (!hasAnyData) {
-            Toast.makeText(context, "Please enter at least one value before submitting", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        AlertDialog.Builder(requireContext())
-            .setTitle("Confirm Submit")
-            .setMessage("Submit hourly data for ${selectedFeeder?.feederName}?")
-            .setPositiveButton("Submit") { _, _ ->
-                performSubmit(rows)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun performSubmit(rows: List<HourlyDataRow>) {
-        val selectedDate = dateFormat.format(calendar.time)
-        val token = SessionManager.getToken(requireContext())
-
-        Log.d(TAG, "🚀 Submitting data...")
-        showLoading(true)
+        Log.d(TAG, "💾 Submitting ${rows.size} rows for ${feeder.feederName}")
 
         lifecycleScope.launch {
             try {
+                showLoading(true)
+
                 val result = withContext(Dispatchers.IO) {
-                    submitToAPI(token, selectedDate, selectedFeeder!!.feederCode, rows)
+                    saveData(date, feeder.feederCode, rows)
                 }
 
                 if (result.success) {
                     AlertDialog.Builder(requireContext())
-                        .setTitle("Success")
-                        .setMessage("✓ Hourly data submitted!\n\nFeeder: ${selectedFeeder?.feederName}\nDate: $selectedDate")
+                        .setTitle("✅ Success")
+                        .setMessage(result.message)
                         .setPositiveButton("OK") { _, _ ->
-                            selectedFeeder = null
-                            adapter.clearData()
-                            binding.llFeederInfo.visibility = View.GONE
-                            findNavController().popBackStack()
+                            findNavController().navigateUp()
                         }
-                        .setCancelable(false)
                         .show()
                 } else {
-                    showError("Submit failed: ${result.message}")
+                    showError(result.message)
                 }
 
             } catch (e: Exception) {
-                Log.e(TAG, "Submit error", e)
+                Log.e(TAG, "❌ Submit error", e)
                 showError("Error: ${e.message}")
             } finally {
                 showLoading(false)
@@ -485,12 +441,8 @@ class FeederHourlyEntryFragment : Fragment() {
         }
     }
 
-    private suspend fun submitToAPI(
-        token: String,
-        date: String,
-        feederCode: String,
-        rows: List<HourlyDataRow>
-    ): SaveResult = withContext(Dispatchers.IO) {
+    private suspend fun saveData(date: String, feederCode: String, rows: List<HourlyDataRow>): SaveResult = withContext(Dispatchers.IO) {
+        val token = SessionManager.getToken(requireContext())
         val url = URL(SAVE_URL)
         val connection = url.openConnection() as HttpURLConnection
 
@@ -509,10 +461,10 @@ class FeederHourlyEntryFragment : Fragment() {
             for (parameter in parameters) {
                 val hoursObject = JSONObject()
 
-                rows.forEach { row ->
+                for (row in rows) {
                     val value = row.parameters[parameter] ?: ""
                     if (value.isNotEmpty()) {
-                        hoursObject.put(row.hour, value)
+                        hoursObject.put(row.hour, value)  // row.hour is "00" to "23"
                     }
                 }
 
@@ -586,16 +538,17 @@ data class FeederData(
 )
 
 data class HourlyDataRow(
-    val hour: String,
+    val hour: String,  // "00" to "23" - database format
     val parameters: MutableMap<String, String>
 )
 
-data class SaveResult(
-    val success: Boolean,
-    val message: String
-)
 
-class HourlyDataAdapter : RecyclerView.Adapter<HourlyDataAdapter.ViewHolder>() {
+class HourlyDataAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+
+    companion object {
+        private const val VIEW_TYPE_HEADER = 0
+        private const val VIEW_TYPE_DATA = 1
+    }
 
     private val rows = mutableListOf<HourlyDataRow>()
     private var feederName: String = ""
@@ -616,19 +569,47 @@ class HourlyDataAdapter : RecyclerView.Adapter<HourlyDataAdapter.ViewHolder>() {
         notifyDataSetChanged()
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_feeder_hourly_row, parent, false)
-        return ViewHolder(view)
+    override fun getItemViewType(position: Int): Int {
+        return if (position == 0) VIEW_TYPE_HEADER else VIEW_TYPE_DATA
     }
 
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(rows[position])
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        return when (viewType) {
+            VIEW_TYPE_HEADER -> {
+                val view = LayoutInflater.from(parent.context)
+                    .inflate(R.layout.item_feeder_hourly_header, parent, false)
+                HeaderViewHolder(view)
+            }
+            VIEW_TYPE_DATA -> {
+                val view = LayoutInflater.from(parent.context)
+                    .inflate(R.layout.item_feeder_hourly_row, parent, false)
+                DataViewHolder(view)
+            }
+            else -> throw IllegalArgumentException("Invalid view type")
+        }
     }
 
-    override fun getItemCount(): Int = rows.size
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        when (holder) {
+            is HeaderViewHolder -> {
+                // Header row - no binding needed, static content
+            }
+            is DataViewHolder -> {
+                val actualPosition = position - 1
+                if (actualPosition >= 0 && actualPosition < rows.size) {
+                    holder.bind(rows[actualPosition])
+                }
+            }
+        }
+    }
 
-    class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    override fun getItemCount(): Int = rows.size + 1
+
+    // Header ViewHolder
+    class HeaderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
+
+    // Data ViewHolder
+    class DataViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
 
         private val tvHour: TextView = itemView.findViewById(R.id.tvHour)
         private val etIB: EditText = itemView.findViewById(R.id.etIB)
@@ -642,7 +623,11 @@ class HourlyDataAdapter : RecyclerView.Adapter<HourlyDataAdapter.ViewHolder>() {
         fun bind(row: HourlyDataRow) {
             currentRow = row
 
-            tvHour.text = "${row.hour}:00"
+            // ✅ CORRECTED: DB hour "00" → Display "1", "01" → "2", ... "23" → "24"
+            // This ensures proper 1-24 display order
+            val dbHourInt = row.hour.toInt()  // "00" → 0, "01" → 1, ... "23" → 23
+            val displayHour = dbHourInt + 1   // 0 → 1, 1 → 2, ... 23 → 24
+            tvHour.text = "$displayHour:00"
 
             setupParameterInput(etIB, "IB")
             setupParameterInput(etIR, "IR")
@@ -711,3 +696,4 @@ class DecimalInputFilter(private val allowNegative: Boolean) : InputFilter {
         return ""
     }
 }
+

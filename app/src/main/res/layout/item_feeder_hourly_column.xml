@@ -7,7 +7,7 @@
     android:padding="4dp">
 
 
-    <!-- Parameter Row -->
+    <!-- ✅ PARAMETER HEADING ROW - Enhanced Visibility -->
     <TextView
         android:id="@+id/tvParam"
         android:layout_width="match_parent"
@@ -15,10 +15,10 @@
         android:gravity="center"
         android:padding="4dp"
         android:text="-"
-        android:textColor="#000000"
-        android:textSize="10sp"
+        android:textColor="@color/black"
+        android:textSize="12sp"
         android:textStyle="bold"
-        android:background="#F5F5F5"
+        android:background="@color/white"
         android:focusable="false"
         android:clickable="false" />
 

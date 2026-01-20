@@ -11,7 +11,8 @@
     <!-- Main Content -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:fitsSystemWindows="true">
 
         <!-- Toolbar -->
         <androidx.appcompat.widget.Toolbar
@@ -20,7 +21,9 @@
             android:layout_height="?attr/actionBarSize"
             android:background="#7C3AED"
             android:elevation="4dp"
+            android:minHeight="56dp"
             android:theme="@style/ThemeOverlay.MaterialComponents.Dark.ActionBar"
+            app:contentInsetStartWithNavigation="16dp"
             app:layout_constraintTop_toTopOf="parent"
             app:popupTheme="@style/ThemeOverlay.MaterialComponents.Light" />
 

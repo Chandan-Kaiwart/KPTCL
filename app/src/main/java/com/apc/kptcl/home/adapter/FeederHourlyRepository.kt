@@ -19,9 +19,9 @@ class FeederHourlyRepository {
 
     companion object {
         private const val TAG = "FeederHourlyRepository"
-        private const val BASE_URL = "http://62.72.59.119:4001/api/feeder"
+        private const val BASE_URL = "http://62.72.59.119:7000/api/feeder"
         private const val HOURLY_ENDPOINT = "$BASE_URL/hourly"
-        private const val FEEDER_LIST_URL = "http://62.72.59.119:5000/api/feeder/list"
+        private const val FEEDER_LIST_URL = "http://62.72.59.119:7000/api/feeder/list"
         private const val TIMEOUT = 15000
     }
 
