@@ -122,7 +122,7 @@ class FeederEditFragment : Fragment() {
             return
         }
 
-        Log.d(TAG, "🔄 Fetching feeders...")
+        Log.d(TAG, "📄 Fetching feeders...")
         showLoading(true)
 
         lifecycleScope.launch {
@@ -226,7 +226,7 @@ class FeederEditFragment : Fragment() {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 if (position < allFeeders.size) {
                     selectedFeeder = allFeeders[position]
-                    Log.d(TAG, "📍 Selected: ${selectedFeeder?.feederName}")
+                    Log.d(TAG, "🔹 Selected: ${selectedFeeder?.feederName}")
                 }
             }
 
@@ -462,7 +462,8 @@ class FeederEditFragment : Fragment() {
 
                 for (row in rows) {
                     val value = row.parameters[parameter] ?: ""
-                    if (value.isNotEmpty()) {
+                    // ✅ Skip empty values AND "null" strings
+                    if (value.isNotEmpty() && value != "null") {
                         hoursObject.put(row.hour, value)
                         hasData = true
                     }
@@ -546,7 +547,6 @@ class FeederEditFragment : Fragment() {
 
 // ✅ Data Classes
 
-
 data class FetchResult(
     val success: Boolean,
     val mode: String,
@@ -558,7 +558,6 @@ data class ExistingHourlyData(
     val hours: Map<String, String>
 )
 
-// ✅ Changed from HourlyEditColumn to HourlyEditRow (like Entry Fragment)
 data class HourlyEditRow(
     val hour: String,  // "00" to "23" - database format
     val parameters: MutableMap<String, String>
@@ -570,7 +569,7 @@ data class SaveResult(
 )
 
 // ============================================
-// MODIFIED HourlyEditAdapter - WITH HEADER ROW
+// MODIFIED HourlyEditAdapter - INTEGER ONLY
 // ============================================
 
 class HourlyEditAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
@@ -653,10 +652,8 @@ class HourlyEditAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         fun bind(row: HourlyEditRow) {
             currentRow = row
 
-            // ✅ CORRECTED: DB hour "00" → Display "1", "01" → "2", ... "23" → "24"
-            // This ensures proper 1-24 display order
-            val dbHourInt = row.hour.toInt()  // "00" → 0, "01" → 1, ... "23" → 23
-            val displayHour = dbHourInt + 1   // 0 → 1, 1 → 2, ... 23 → 24
+            val dbHourInt = row.hour.toInt()
+            val displayHour = dbHourInt + 1
             tvHour.text = "$displayHour:00"
 
             setupParameterInput(etIB, "IB")
@@ -666,6 +663,7 @@ class HourlyEditAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
             setupParameterInput(etMVAR, "MVAR")
         }
 
+
         private fun setupParameterInput(editText: EditText, parameterName: String) {
             // Remove old watcher
             editText.tag?.let { oldWatcher ->
@@ -674,15 +672,29 @@ class HourlyEditAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
                 }
             }
 
-            if (parameterName == "MVAR") {
-                editText.inputType = android.text.InputType.TYPE_CLASS_TEXT or
-                        android.text.InputType.TYPE_TEXT_VARIATION_NORMAL
-                editText.filters = arrayOf(DecimalInputFilter(allowNegative = true))
-                editText.hint = "Can be ±"
-            } else {
-                editText.inputType = android.text.InputType.TYPE_CLASS_NUMBER or
-                        android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
-                editText.filters = arrayOf(DecimalInputFilter(allowNegative = false))
+            // ✅ UPDATED: Different input types for different parameters
+            when (parameterName) {
+                "IB", "IR", "IY" -> {
+                    // Integer only, no decimals, no negative
+                    editText.inputType = android.text.InputType.TYPE_CLASS_NUMBER
+                    editText.filters = arrayOf(IntegerInputFilter(allowNegative = false))
+                    editText.hint = "Integer only"
+                }
+                "MW" -> {
+                    // Decimal allowed (8 places), no negative
+                    editText.inputType = android.text.InputType.TYPE_CLASS_NUMBER or
+                            android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+                    editText.filters = arrayOf(DecimalInputFilter(allowNegative = false, maxDecimalPlaces = 8))
+                    editText.hint = "e.g., 12.12345678"
+                }
+                "MVAR" -> {
+                    // Decimal allowed (8 places), negative allowed
+                    editText.inputType = android.text.InputType.TYPE_CLASS_NUMBER or
+                            android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL or
+                            android.text.InputType.TYPE_NUMBER_FLAG_SIGNED
+                    editText.filters = arrayOf(DecimalInputFilter(allowNegative = true, maxDecimalPlaces = 8))
+                    editText.hint = "Can be ± decimal"
+                }
             }
 
             // Set current value
@@ -704,3 +716,61 @@ class HourlyEditAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     }
 }
 
+// ✅ Decimal Input Filter for MW and MVAR
+class DecimalInputFilter(private val allowNegative: Boolean, private val maxDecimalPlaces: Int = 8) : InputFilter {
+    override fun filter(
+        source: CharSequence?,
+        start: Int,
+        end: Int,
+        dest: Spanned?,
+        dstart: Int,
+        dend: Int
+    ): CharSequence? {
+        val builder = StringBuilder(dest ?: "")
+        builder.replace(dstart, dend, source?.subSequence(start, end).toString())
+        val result = builder.toString()
+
+        if (result.isEmpty()) return null
+        if (allowNegative && result == "-") return null
+        if (!allowNegative && result.contains("-")) return ""
+        if (result.count { it == '.' } > 1) return ""
+
+        val pattern = if (allowNegative) {
+            "^-?\\d*\\.?\\d{0,$maxDecimalPlaces}$"
+        } else {
+            "^\\d*\\.?\\d{0,$maxDecimalPlaces}$"
+        }
+
+        if (result.matches(Regex(pattern))) {
+            return null
+        }
+
+        return ""
+    }
+}
+
+// ✅ INTEGER ONLY INPUT FILTER - BLOCKS DECIMAL POINTS
+class IntegerInputFilter(private val allowNegative: Boolean) : InputFilter {
+    override fun filter(
+        source: CharSequence?,
+        start: Int,
+        end: Int,
+        dest: Spanned?,
+        dstart: Int,
+        dend: Int
+    ): CharSequence? {
+        val builder = StringBuilder(dest ?: "")
+        builder.replace(dstart, dend, source?.subSequence(start, end).toString())
+        val result = builder.toString()
+
+        if (result.isEmpty()) return null
+        if (allowNegative && result == "-") return null
+        if (!allowNegative && result.contains("-")) return ""
+
+        if (result.matches(Regex("^-?\\d+$"))) {
+            return null
+        }
+
+        return ""
+    }
+}

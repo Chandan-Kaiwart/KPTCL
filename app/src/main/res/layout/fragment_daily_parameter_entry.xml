@@ -178,7 +178,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:gravity="center"
-                android:text="E-LOG ENTRY FOR 33/11KV SUBSTATION: BATAKURKI_33KV"
+                android:text="E-LOG ENTRY FOR 33/11KV SUBSTATION"
                 android:textColor="#000000"
                 android:textSize="13sp"
                 android:textStyle="bold" />

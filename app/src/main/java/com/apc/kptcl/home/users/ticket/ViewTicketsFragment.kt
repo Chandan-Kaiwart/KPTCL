@@ -1,5 +1,6 @@
 package com.apc.kptcl.home.users.ticket
 
+import android.app.AlertDialog
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -32,11 +33,9 @@ class ViewTicketsFragment : Fragment() {
 
     companion object {
         private const val TAG = "ViewTicketsFragment"
-        // Ticket API is on port 5015, not 5010 (login port)
         private const val TICKET_API_BASE_URL = "http://62.72.59.119:7000/"
     }
 
-    // API setup - using ticket API server
     private val retrofit by lazy {
         Retrofit.Builder()
             .baseUrl(TICKET_API_BASE_URL)
@@ -72,9 +71,8 @@ class ViewTicketsFragment : Fragment() {
     }
 
     private fun setupStatusCards() {
-        // Status cards are clickable to filter tickets
         binding.tvActiveCount.setOnClickListener {
-            filterTickets("OPEN")
+            filterTickets("ACTIVE")
         }
         binding.tvPendingCount.setOnClickListener {
             filterTickets("PENDING")
@@ -89,11 +87,9 @@ class ViewTicketsFragment : Fragment() {
 
     private fun filterTickets(status: String) {
         currentFilter = if (currentFilter == status) {
-            // Toggle off filter if clicking the same status
             ticketsAdapter.submitList(allTickets)
             null
         } else {
-            // Apply filter
             val filteredTickets = allTickets.filter {
                 it.ticketStatus?.uppercase() == status.uppercase()
             }
@@ -104,18 +100,69 @@ class ViewTicketsFragment : Fragment() {
 
     private fun setupRecyclerView() {
         ticketsAdapter = TicketsAdapter { ticket ->
-            // Handle ticket click - show details
-            Toast.makeText(
-                requireContext(),
-                "Ticket ID: ${ticket.ticketId}\nStatus: ${ticket.ticketStatus}",
-                Toast.LENGTH_SHORT
-            ).show()
+            // ✅ Show ticket details dialog with resolution/reason
+            showTicketDetailsDialog(ticket)
         }
 
         binding.rvTickets.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = ticketsAdapter
         }
+    }
+
+    /**
+     * ✅ NEW: Show ticket details dialog with full resolution/reason
+     */
+    private fun showTicketDetailsDialog(ticket: Ticket) {
+        val message = buildString {
+            append("🎫 Ticket ID: ${ticket.ticketId}\n\n")
+            append("👤 User: ${ticket.username}\n")
+            append("📧 Email: ${ticket.emailId}\n")
+            append("📱 Mobile: ${ticket.mobileNumber}\n\n")
+            append("📋 Classification: ${ticket.ticketClassification}\n")
+            append("❓ Problem: ${ticket.problemStatement}\n\n")
+            append("📅 Start: ${ticket.startDatetime}\n")
+
+            if (!ticket.endDatetime.isNullOrBlank()) {
+                append("🏁 End: ${ticket.endDatetime}\n")
+            }
+
+            append("\n🎯 Status: ${ticket.ticketStatus}\n\n")
+
+            // ✅ Show resolution/reason
+            if (!ticket.resolutionProvided.isNullOrBlank()) {
+                when (ticket.ticketStatus?.uppercase()) {
+                    "REJECTED" -> {
+                        append("❌ Rejection Reason:\n")
+                        append("${ticket.resolutionProvided}")
+                    }
+                    "APPROVED & CLOSED" -> {
+                        append("✅ Resolution:\n")
+                        append("${ticket.resolutionProvided}")
+                    }
+                    else -> {
+                        append("📝 Notes:\n")
+                        append("${ticket.resolutionProvided}")
+                    }
+                }
+            }
+        }
+
+        val title = when (ticket.ticketStatus?.uppercase()) {
+            "REJECTED" -> "❌ Rejected Ticket"
+            "APPROVED & CLOSED" -> "✅ Approved Ticket"
+            "ACTIVE" -> "🟡 Active Ticket"
+            "PENDING" -> "🟠 Pending Ticket"
+            else -> "🎫 Ticket Details"
+        }
+
+        AlertDialog.Builder(requireContext())
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton("OK") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
     }
 
     private fun setupFab() {
@@ -125,12 +172,10 @@ class ViewTicketsFragment : Fragment() {
     }
 
     private fun loadTickets() {
-        // Show loading state
         binding.rvTickets.visibility = View.GONE
 
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                // Get token from SessionManager
                 val token = SessionManager.getToken(requireContext())
 
                 Log.d(TAG, "Loading tickets...")
@@ -157,15 +202,15 @@ class ViewTicketsFragment : Fragment() {
                         allTickets = ticketResponse.data
                         ticketsAdapter.submitList(allTickets)
 
-                        // Calculate counts
-                        val openCount = allTickets.count { it.ticketStatus == "OPEN" }
-                        val pendingCount = allTickets.count { it.ticketStatus == "PENDING" }
-                        val closedCount = allTickets.count { it.ticketStatus == "APPROVED & CLOSED" }
-                        val rejectedCount = allTickets.count { it.ticketStatus == "REJECTED" }
+                        // ✅ Calculate counts - Updated to match actual statuses
+                        val activeCount = allTickets.count { it.ticketStatus?.uppercase() == "ACTIVE" }
+                        val pendingCount = allTickets.count { it.ticketStatus?.uppercase() == "PENDING" }
+                        val closedCount = allTickets.count { it.ticketStatus?.uppercase() == "APPROVED & CLOSED" }
+                        val rejectedCount = allTickets.count { it.ticketStatus?.uppercase() == "REJECTED" }
 
-                        Log.d(TAG, "Status counts - Open: $openCount, Pending: $pendingCount, Closed: $closedCount, Rejected: $rejectedCount")
+                        Log.d(TAG, "Status counts - Active: $activeCount, Pending: $pendingCount, Closed: $closedCount, Rejected: $rejectedCount")
 
-                        updateStatusCounts(openCount, pendingCount, closedCount, rejectedCount)
+                        updateStatusCounts(activeCount, pendingCount, closedCount, rejectedCount)
 
                         binding.rvTickets.visibility = View.VISIBLE
                         Toast.makeText(requireContext(), "Loaded ${allTickets.size} tickets", Toast.LENGTH_SHORT).show()
@@ -181,8 +226,6 @@ class ViewTicketsFragment : Fragment() {
                     when (response.code()) {
                         401 -> {
                             showError("Session expired. Please login again.")
-                            // Navigate to login
-                            // findNavController().navigate(R.id.action_to_login)
                         }
                         else -> showError("Error: ${response.code()} - ${response.message()}")
                     }

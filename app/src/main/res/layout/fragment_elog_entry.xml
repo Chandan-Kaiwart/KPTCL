@@ -175,16 +175,6 @@
                 android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/tvSubstationName"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:text="BATAKURKI_33KV"
-                android:textColor="@color/text_primary"
-                android:textSize="12sp"
-                android:textStyle="bold" />
-
-            <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"

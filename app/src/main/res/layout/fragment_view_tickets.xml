@@ -93,7 +93,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
-                                android:text="1"
+                                android:text="0"
                                 android:textColor="@color/text_primary"
                                 android:textSize="24sp"
                                 android:textStyle="bold" />
@@ -103,7 +103,7 @@
                                 android:layout_height="wrap_content"
                                 android:drawableStart="@drawable/ic_refresh"
                                 android:drawablePadding="4dp"
-                                android:text="Updated"
+                                android:text="Click to filter"
                                 android:textColor="@color/text_secondary"
                                 android:textSize="10sp" />
                         </LinearLayout>
@@ -154,7 +154,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
-                                android:text="1"
+                                android:text="0"
                                 android:textColor="@color/text_primary"
                                 android:textSize="24sp"
                                 android:textStyle="bold" />
@@ -162,7 +162,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Awaiting Approval"
+                                android:text="Click to filter"
                                 android:textColor="@color/text_secondary"
                                 android:textSize="10sp" />
                         </LinearLayout>
@@ -176,7 +176,7 @@
                     android:layout_marginTop="12dp"
                     android:orientation="horizontal">
 
-                    <!-- Approved & Closed Card -->
+                    <!-- Closed Card -->
                     <com.google.android.material.card.MaterialCardView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -191,8 +191,8 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:background="@drawable/bg_card"
-                            android:padding="12dp">
+                            android:padding="12dp"
+                            android:background="@drawable/bg_card">
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -204,9 +204,9 @@
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
-                                    android:text="Approved &amp; Closed"
+                                    android:text="Closed"
                                     android:textColor="@color/primary_dark"
-                                    android:textSize="11sp"
+                                    android:textSize="12sp"
                                     android:textStyle="bold" />
 
                                 <ImageView
@@ -229,7 +229,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Closed Tickets"
+                                android:text="Click to filter"
                                 android:textColor="@color/text_secondary"
                                 android:textSize="10sp" />
                         </LinearLayout>
@@ -250,8 +250,8 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:background="@drawable/bg_card"
-                            android:padding="12dp">
+                            android:padding="12dp"
+                            android:background="@drawable/bg_card">
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -271,7 +271,7 @@
                                 <ImageView
                                     android:layout_width="24dp"
                                     android:layout_height="24dp"
-                                    android:src="@drawable/ic_cancel"
+                                    android:src="@drawable/ic_close"
                                     app:tint="@color/error_red" />
                             </LinearLayout>
 
@@ -288,7 +288,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Rejected"
+                                android:text="Click to filter"
                                 android:textColor="@color/text_secondary"
                                 android:textSize="10sp" />
                         </LinearLayout>
@@ -296,7 +296,7 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Tickets Table - Single HorizontalScrollView for both header and data -->
+            <!-- Tickets Table with Resolution column -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -317,7 +317,7 @@
                         android:background="@color/table_header"
                         android:orientation="vertical">
 
-                        <!-- Table Header -->
+                        <!-- Table Header with Resolution column -->
                         <LinearLayout
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
@@ -405,9 +405,20 @@
                                 android:textColor="@color/primary_dark"
                                 android:textSize="11sp"
                                 android:textStyle="bold" />
+
+                            <!-- ✅ NEW: Resolution header -->
+                            <TextView
+                                android:layout_width="150dp"
+                                android:layout_height="wrap_content"
+                                android:gravity="center"
+                                android:paddingHorizontal="4dp"
+                                android:text="RESOLUTION"
+                                android:textColor="@color/primary_dark"
+                                android:textSize="11sp"
+                                android:textStyle="bold" />
                         </LinearLayout>
 
-                        <!-- RecyclerView for ticket rows (without its own scroll) -->
+                        <!-- RecyclerView for ticket rows -->
                         <androidx.recyclerview.widget.RecyclerView
                             android:id="@+id/rvTickets"
                             android:layout_width="wrap_content"

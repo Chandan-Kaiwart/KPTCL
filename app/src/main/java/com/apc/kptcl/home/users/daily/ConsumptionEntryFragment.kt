@@ -36,6 +36,7 @@ import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
 import androidx.navigation.fragment.findNavController
+
 class ConsumptionEntryFragment : Fragment() {
 
     private var _binding: FragmentConsumptionEntryBinding? = null
@@ -58,6 +59,7 @@ class ConsumptionEntryFragment : Fragment() {
     companion object {
         private const val TAG = "ConsumptionEntry"
         private const val FEEDER_LIST_URL = "http://62.72.59.119:7000/api/feeder/list"
+        private const val CONSUMPTION_URL = "http://62.72.59.119:7000/api/feeder/consumption" // ✅ For fetching
         private const val SAVE_URL = "http://62.72.59.119:7000/api/feeder/consumption/save"
         private const val TIMEOUT = 15000
     }
@@ -118,6 +120,7 @@ class ConsumptionEntryFragment : Fragment() {
 
         datePickerDialog.show()
     }
+
     private fun updateTableTitle() {
         val formattedDate = dateFormat.format(calendar.time)
         // ✅ Show station name in title only if it's available
@@ -285,20 +288,8 @@ class ConsumptionEntryFragment : Fragment() {
                         val selected = allFeeders[position]
                         Log.d(TAG, "✅ Selected: ${selected.feederName}")
 
-                        val consumptionData = EntryConsumptionData(
-                            feederName = selected.feederName,
-                            feederCode = selected.feederCode,
-                            feederCategory = selected.feederCategory,
-                            remark = "",
-                            totalConsumption = null,
-                            supply3ph = "",
-                            supply1ph = ""
-                        )
-
-                        selectedFeederData = consumptionData
-                        adapter.submitData(consumptionData, dateFormat.format(calendar.time), stationName)
-
-                        Log.d(TAG, "✅ Data submitted to RecyclerView")
+                        // ✅ Try to fetch existing data first
+                        fetchExistingDataAndDisplay(selected)
                     }
                 }
 
@@ -310,6 +301,144 @@ class ConsumptionEntryFragment : Fragment() {
         } catch (e: Exception) {
             Log.e(TAG, "❌ SPINNER ERROR", e)
             e.printStackTrace()
+        }
+    }
+
+    /**
+     * ✅ NEW: Fetch existing data for selected feeder and display
+     */
+    private fun fetchExistingDataAndDisplay(selected: FeederData) {
+        lifecycleScope.launch {
+            try {
+                val token = SessionManager.getToken(requireContext())
+                val selectedDate = dateFormat.format(calendar.time)
+
+                Log.d(TAG, "📥 Fetching existing data for ${selected.feederName} on $selectedDate")
+
+                // Try to fetch existing data
+                val existingData = fetchExistingConsumptionData(
+                    token,
+                    selected.feederCode,
+                    selectedDate
+                )
+
+                // Create consumption data object (with existing data if found)
+                val consumptionData = EntryConsumptionData(
+                    feederName = selected.feederName,
+                    feederCode = selected.feederCode,
+                    feederCategory = selected.feederCategory,
+                    remark = existingData?.remark ?: "PROPER",  // ✅ Pre-fill or default
+                    totalConsumption = existingData?.totalConsumption,  // ✅ Pre-fill or null
+                    supply3ph = existingData?.supply3ph ?: "",  // ✅ Pre-fill or empty
+                    supply1ph = existingData?.supply1ph ?: ""  // ✅ Pre-fill or empty
+                )
+
+                selectedFeederData = consumptionData
+                adapter.submitData(consumptionData, selectedDate, stationName)
+
+                if (existingData != null) {
+                    Log.d(TAG, "✅ Existing data loaded: TC=${existingData.totalConsumption}, 3PH=${existingData.supply3ph}")
+                    Snackbar.make(binding.root, "✓ Existing data loaded", Snackbar.LENGTH_SHORT).show()
+                } else {
+                    Log.d(TAG, "ℹ️ No existing data found - showing empty form")
+                }
+
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Error fetching existing data: ${e.message}")
+                // On error, show empty form
+                val consumptionData = EntryConsumptionData(
+                    feederName = selected.feederName,
+                    feederCode = selected.feederCode,
+                    feederCategory = selected.feederCategory,
+                    remark = "PROPER",
+                    totalConsumption = null,
+                    supply3ph = "",
+                    supply1ph = ""
+                )
+                selectedFeederData = consumptionData
+                adapter.submitData(consumptionData, dateFormat.format(calendar.time), stationName)
+            }
+        }
+    }
+
+    /**
+     * ✅ NEW: Fetch existing consumption data from API
+     */
+    private suspend fun fetchExistingConsumptionData(
+        token: String,
+        feederId: String,
+        date: String
+    ): EntryConsumptionData? = withContext(Dispatchers.IO) {
+        var connection: HttpURLConnection? = null
+        try {
+            val url = URL(CONSUMPTION_URL)
+            connection = url.openConnection() as HttpURLConnection
+
+            connection.requestMethod = "POST"
+            connection.connectTimeout = TIMEOUT
+            connection.readTimeout = TIMEOUT
+            connection.setRequestProperty("Content-Type", "application/json")
+            connection.setRequestProperty("Accept", "application/json")
+            connection.setRequestProperty("Authorization", "Bearer $token")
+            connection.doOutput = true
+            connection.doInput = true
+
+            // Create JSON body
+            val jsonBody = JSONObject().apply {
+                put("feeder_id", feederId)
+                put("date", date)
+            }
+
+            Log.d(TAG, "📤 Fetch request: $jsonBody")
+
+            // Send request
+            val writer = OutputStreamWriter(connection.outputStream)
+            writer.write(jsonBody.toString())
+            writer.flush()
+            writer.close()
+
+            val responseCode = connection.responseCode
+            Log.d(TAG, "📥 Response code: $responseCode")
+
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                val reader = BufferedReader(InputStreamReader(connection.inputStream))
+                val response = reader.readText()
+                reader.close()
+
+                Log.d(TAG, "📥 Response: ${response.take(200)}...")
+
+                // Parse response
+                val jsonObject = JSONObject(response)
+                val success = jsonObject.optBoolean("success", false)
+
+                if (success) {
+                    val dataArray = jsonObject.optJSONArray("data")
+                    if (dataArray != null && dataArray.length() > 0) {
+                        val item = dataArray.getJSONObject(0)
+
+                        // Return existing data
+                        return@withContext EntryConsumptionData(
+                            feederName = item.optString("FEEDER_NAME", ""),
+                            feederCode = feederId,
+                            feederCategory = item.optString("FEEDER_CATEGORY", ""),
+                            remark = item.optString("REMARK", "PROPER"),
+                            totalConsumption = item.optDouble("TOTAL_CONSUMPTION").takeIf { !it.isNaN() },
+                            supply3ph = item.optString("SUPPLY_3PH", ""),
+                            supply1ph = item.optString("SUPPLY_1PH", "")
+                        )
+                    }
+                }
+            } else {
+                Log.w(TAG, "⚠️ No existing data (HTTP $responseCode)")
+            }
+
+            null // No data found
+
+        } catch (e: Exception) {
+            Log.w(TAG, "⚠️ Error fetching existing data: ${e.message}")
+            null // Return null on error
+        } finally {
+            connection?.disconnect()
         }
     }
 
@@ -440,8 +569,6 @@ class ConsumptionEntryFragment : Fragment() {
             }
             .setNegativeButton("Cancel", null)
             .show()
-
-
     }
 
     /**
@@ -729,7 +856,6 @@ class EntryConsumptionDataAdapter(
         private val etTotal: EditText = itemView.findViewById(R.id.etTotal)
         private val spinnerSupply3ph: Spinner = itemView.findViewById(R.id.spinnerSupply3ph)
         private val spinnerSupply1ph: Spinner = itemView.findViewById(R.id.spinnerSupply1ph)
-        // tvCode removed - not needed in UI
 
         init {
             Log.d("ConsumptionEntry", "🔧 Setting up TIME spinners")
@@ -769,8 +895,6 @@ class EntryConsumptionDataAdapter(
         }
 
         fun bind(data: EntryConsumptionData, date: String, station: String) {
-
-
             tvCategory.text = data.feederCategory ?: ""
 
             etRemark.setText(data.remark ?: "")

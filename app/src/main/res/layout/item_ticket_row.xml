@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- NO HorizontalScrollView here - parent layout handles scrolling -->
+<!-- Updated with Resolution/Reason column -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
@@ -101,6 +101,19 @@
         android:text="-"
         android:textSize="11sp"
         android:textStyle="bold"
+        android:maxLines="2"
+        android:ellipsize="end" />
+
+    <!-- ✅ NEW: Resolution/Reason column -->
+    <TextView
+        android:id="@+id/tvResolution"
+        android:layout_width="150dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:paddingHorizontal="4dp"
+        android:text="-"
+        android:textColor="@color/text_secondary"
+        android:textSize="11sp"
         android:maxLines="2"
         android:ellipsize="end" />
 </LinearLayout>

@@ -191,7 +191,7 @@ class MainActivity : AppCompatActivity() {
                                 inclusive = false
                             }
                         })
-                    Toast.makeText(this, "This feature will come soon", Toast.LENGTH_LONG).show()
+
                 }
                 R.id.viewTickets -> {
                     navController.navigate(R.id.viewTicketsFragment, null,
@@ -200,7 +200,7 @@ class MainActivity : AppCompatActivity() {
                                 inclusive = false
                             }
                         })
-                    Toast.makeText(this, "This feature will come soon", Toast.LENGTH_LONG).show()
+
                 }
                 R.id.excel -> {
                     navController.navigate(R.id.excelDownload, null,
@@ -209,7 +209,6 @@ class MainActivity : AppCompatActivity() {
                                 inclusive = false
                             }
                         })
-                    Toast.makeText(this, "This feature will come soon", Toast.LENGTH_LONG).show()
                 }
             }
             binding.drawerLayout.closeDrawer(GravityCompat.START)

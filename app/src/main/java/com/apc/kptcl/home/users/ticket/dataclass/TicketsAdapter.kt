@@ -36,6 +36,7 @@ class TicketsAdapter(
         private val tvProblem: TextView = itemView.findViewById(R.id.tvProblem)
         private val tvStartDate: TextView = itemView.findViewById(R.id.tvStartDate)
         private val tvStatus: TextView = itemView.findViewById(R.id.tvStatus)
+        private val tvResolution: TextView = itemView.findViewById(R.id.tvResolution) // ✅ NEW
 
         fun bind(ticket: Ticket, onTicketClick: (Ticket) -> Unit) {
             tvUsername.text = ticket.username ?: "-"
@@ -53,8 +54,47 @@ class TicketsAdapter(
             tvStatus.text = getStatusText(ticket.ticketStatus)
             tvStatus.setTextColor(getStatusColor(ticket.ticketStatus))
 
+            // ✅ Show resolution/reason
+            displayResolution(ticket)
+
             itemView.setOnClickListener {
                 onTicketClick(ticket)
+            }
+        }
+
+        /**
+         * ✅ Display resolution or rejection reason
+         */
+        private fun displayResolution(ticket: Ticket) {
+            val resolution = ticket.resolutionProvided
+
+            when {
+                resolution.isNullOrBlank() -> {
+                    tvResolution.text = "-"
+                    tvResolution.setTextColor(
+                        ContextCompat.getColor(itemView.context, R.color.text_secondary)
+                    )
+                }
+                ticket.ticketStatus?.uppercase() == "REJECTED" -> {
+                    // Show rejection reason in red
+                    tvResolution.text = resolution.take(50) + if (resolution.length > 50) "..." else ""
+                    tvResolution.setTextColor(
+                        ContextCompat.getColor(itemView.context, R.color.error_red)
+                    )
+                }
+                ticket.ticketStatus?.uppercase() == "APPROVED & CLOSED" -> {
+                    // Show approval message in green
+                    tvResolution.text = resolution.take(50) + if (resolution.length > 50) "..." else ""
+                    tvResolution.setTextColor(
+                        ContextCompat.getColor(itemView.context, R.color.success_green)
+                    )
+                }
+                else -> {
+                    tvResolution.text = resolution.take(50) + if (resolution.length > 50) "..." else ""
+                    tvResolution.setTextColor(
+                        ContextCompat.getColor(itemView.context, R.color.text_secondary)
+                    )
+                }
             }
         }
 
@@ -76,6 +116,7 @@ class TicketsAdapter(
                 "APPROVED & CLOSED" -> "CLOSED"
                 "PENDING" -> "PENDING"
                 "REJECTED" -> "REJECTED"
+                "ACTIVE" -> "ACTIVE"
                 else -> status ?: "-"
             }
         }
@@ -86,6 +127,7 @@ class TicketsAdapter(
                 "APPROVED & CLOSED" -> ContextCompat.getColor(itemView.context, R.color.success_green)
                 "PENDING" -> ContextCompat.getColor(itemView.context, R.color.warning_orange)
                 "REJECTED" -> ContextCompat.getColor(itemView.context, R.color.error_red)
+                "ACTIVE" -> ContextCompat.getColor(itemView.context, R.color.primary_light)
                 else -> ContextCompat.getColor(itemView.context, R.color.text_secondary)
             }
         }
