@@ -57,9 +57,9 @@ class FeederHourlyEntryFragment : Fragment() {
 
     companion object {
         private const val TAG = "HourlyEntry"
-        private const val FEEDER_LIST_URL = "http://62.72.59.119:7000/api/feeder/list"
-        private const val FETCH_URL = "http://62.72.59.119:7000/api/feeder/hourly-entry/fetch"
-        private const val SAVE_URL = "http://62.72.59.119:7000/api/feeder/hourly-entry/save"
+        private const val FEEDER_LIST_URL = "http://62.72.59.119:9000/api/feeder/list"
+        private const val FETCH_URL = "http://62.72.59.119:9000/api/feeder/hourly-entry/fetch"
+        private const val SAVE_URL = "http://62.72.59.119:9000/api/feeder/hourly-entry/save"
         private const val TIMEOUT = 15000
     }
 
@@ -234,6 +234,16 @@ class FeederHourlyEntryFragment : Fragment() {
         adapter.setDropDownViewResource(R.layout.spinner_dropdown_item_black)
 
         binding.actvFeeder.adapter = adapter
+
+        // ✅ FIX: By default first feeder ko select karo
+        if (allFeeders.isNotEmpty()) {
+            selectedFeeder = allFeeders[0]
+            binding.actvFeeder.setSelection(0)  // ← setText() ki jagah setSelection() use karo
+            Log.d(TAG, "✅ Default selected: ${selectedFeeder?.feederName} (${selectedFeeder?.feederCode})")
+
+            // ✅ Load data for first feeder automatically
+            loadFeederData()
+        }
 
         binding.actvFeeder.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {

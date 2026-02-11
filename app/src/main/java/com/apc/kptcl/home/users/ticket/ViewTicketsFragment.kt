@@ -33,7 +33,7 @@ class ViewTicketsFragment : Fragment() {
 
     companion object {
         private const val TAG = "ViewTicketsFragment"
-        private const val TICKET_API_BASE_URL = "http://62.72.59.119:7000/"
+        private const val TICKET_API_BASE_URL = "http://62.72.59.119:9000/"
     }
 
     private val retrofit by lazy {

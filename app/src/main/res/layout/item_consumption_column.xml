@@ -10,23 +10,23 @@
     <TextView
         android:id="@+id/tvCategory"
         android:layout_width="150dp"
-        android:layout_height="40dp"
+        android:layout_height="70dp"
         android:gravity="center"
-        android:padding="6dp"
+        android:padding="4dp"
         android:text="URBAN"
         android:textColor="@color/black"
-        android:textSize="9sp"
+        android:textSize="15sp"
         android:background="@drawable/table_cell_border" />
 
     <!-- Remark - Editable -->
     <EditText
         android:id="@+id/etRemark"
         android:layout_width="150dp"
-        android:layout_height="40dp"
+        android:layout_height="70dp"
         android:gravity="center"
-        android:padding="6dp"
+        android:padding="4dp"
         android:hint="Remark"
-        android:textSize="9sp"
+        android:textSize="15sp"
         android:textColor="@color/black"
         android:textColorHint="@color/black"
         android:inputType="text"
@@ -37,40 +37,47 @@
     <EditText
         android:id="@+id/etTotal"
         android:layout_width="150dp"
-        android:layout_height="40dp"
+        android:layout_height="70dp"
         android:gravity="center"
-        android:padding="6dp"
+        android:padding="4dp"
         android:textColor="@color/black"
         android:textColorHint="@color/black"
         android:hint="0.0"
-        android:textSize="9sp"
+        android:textSize="15sp"
         android:inputType="numberDecimal"
         android:maxLines="1"
         android:background="@drawable/table_cell_border_editable" />
 
-    <!-- Supply 3PH - Dropdown -->
-    <Spinner
-        android:id="@+id/spinnerSupply3ph"
+    <!-- Supply 3PH - Editable Time Input (HH:MM) -->
+    <EditText
+        android:id="@+id/etSupply3ph"
         android:layout_width="150dp"
-        android:layout_height="40dp"
+        android:layout_height="70dp"
         android:gravity="center"
+        android:padding="4dp"
+        android:hint="HH:MM"
+        android:textSize="15sp"
         android:textColor="@color/black"
-
         android:textColorHint="@color/black"
-        android:padding="2dp"
-        android:spinnerMode="dropdown"
+        android:inputType="text"
+        android:maxLength="5"
+        android:maxLines="1"
         android:background="@drawable/table_cell_border_editable" />
 
-    <!-- Supply 1PH - Dropdown -->
-    <Spinner
-        android:id="@+id/spinnerSupply1ph"
+    <!-- Supply 1PH - Editable Time Input (HH:MM) -->
+    <EditText
+        android:id="@+id/etSupply1ph"
         android:layout_width="150dp"
-        android:layout_height="40dp"
+        android:layout_height="70dp"
         android:gravity="center"
+        android:padding="4dp"
+        android:hint="HH:MM"
+        android:textSize="15sp"
         android:textColor="@color/black"
         android:textColorHint="@color/black"
-        android:padding="2dp"
-        android:spinnerMode="dropdown"
+        android:inputType="text"
+        android:maxLength="5"
+        android:maxLines="1"
         android:background="@drawable/table_cell_border_editable" />
 
 </LinearLayout>

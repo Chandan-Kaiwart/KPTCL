@@ -35,9 +35,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="center"
-                        android:text="FEEDER DATA ENTRY FOR 33/11KV SUBSTATION"
+                        android:text="FEEDER DATA ENTRY"
                         android:textColor="@android:color/white"
-                        android:textSize="14sp"
+                        android:textSize="16sp"
                         android:textStyle="bold" />
 
 
@@ -46,9 +46,9 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
                         android:gravity="center"
-                        android:text="(View Daily Parameter : ENERGY CONSUMPTION, SUPPLY 3PH, SUPPLY 1PH)"
+                        android:text="(View Daily Parameter : ENERGY CONSUMPTION)"
                         android:textColor="@android:color/white"
-                        android:textSize="11sp" />
+                        android:textSize="13sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

@@ -1,4 +1,3 @@
-
 package com.apc.kptcl.home.users.daily
 
 import android.app.DatePickerDialog
@@ -55,8 +54,8 @@ class DailyParameterViewFragment : Fragment() {
     companion object {
         private const val TAG = "DailyParameterView"
         private const val API_BASE_URL = "http://62.72.59.119"
-        private const val FEEDER_LIST_URL = "$API_BASE_URL:7000/api/feeder/list"
-        private const val CONSUMPTION_URL = "$API_BASE_URL:7000/api/feeder/consumption"
+        private const val FEEDER_LIST_URL = "$API_BASE_URL:9000/api/feeder/list"
+        private const val CONSUMPTION_URL = "$API_BASE_URL:9000/api/feeder/consumption"
     }
 
     override fun onCreateView(
@@ -127,7 +126,9 @@ class DailyParameterViewFragment : Fragment() {
         }
 
         // Create display list with feeder name and code
-        val displayList = feederList.map { "${it.feederName} (${it.feederCode})" }
+        val displayList = feederList.map {
+            "${it.feederName} (${it.feederCode ?: "NO CODE"})"
+        }
 
         Log.d(TAG, "Setting up dropdown with ${displayList.size} items")
         displayList.forEachIndexed { index, item ->
@@ -229,7 +230,7 @@ class DailyParameterViewFragment : Fragment() {
      * Step 2: Search/load consumption data for selected feeder
      */
     private fun searchData() {
-        if (selectedFeederId == null) {
+        if (selectedFeederName == null) {
             Snackbar.make(
                 binding.root,
                 "Please select a feeder first",
@@ -251,11 +252,11 @@ class DailyParameterViewFragment : Fragment() {
 
                 val selectedDate = dateFormat.format(calendar.time)
 
-                Log.d(TAG, "🔍 Searching consumption data for feeder: $selectedFeederId on date: $selectedDate")
+                Log.d(TAG, "🔍 Searching consumption data for feeder: $selectedFeederName (ID: $selectedFeederId) on date: $selectedDate")
 
-                // Fetch consumption data
+                // Fetch consumption data - pass both ID and name
                 val consumptionData = withContext(Dispatchers.IO) {
-                    fetchConsumptionData(token, selectedFeederId!!, selectedDate)
+                    fetchConsumptionData(token, selectedFeederId, selectedFeederName!!, selectedDate)
                 }
 
                 // Store for later use
@@ -275,7 +276,7 @@ class DailyParameterViewFragment : Fragment() {
                 } else {
                     // GET CATEGORY FROM FEEDER LIST IF API DOESN'T PROVIDE IT
                     val selectedFeederCategory = feederList.find {
-                        it.feederId == selectedFeederId
+                        it.feederId == selectedFeederId || it.feederName == selectedFeederName
                     }?.feederCategory ?: ""
 
                     Log.d(TAG, "🏷️ Selected feeder category from feeder list: '$selectedFeederCategory'")
@@ -390,9 +391,11 @@ class DailyParameterViewFragment : Fragment() {
 
         for (i in 0 until dataArray.length()) {
             val item = dataArray.getJSONObject(i)
-            val feederId = item.optString("FEEDER_CODE", "")
+
+            // ✅ FIXED: Properly handle null FEEDER_CODE
+            val feederId = if (item.isNull("FEEDER_CODE")) null else item.optString("FEEDER_CODE")
             val feederName = item.optString("FEEDER_NAME", "")
-            val feederCode = item.optString("FEEDER_CODE", "")
+            val feederCode = if (item.isNull("FEEDER_CODE")) null else item.optString("FEEDER_CODE")
 
             list.add(
                 FeederItem(
@@ -400,9 +403,9 @@ class DailyParameterViewFragment : Fragment() {
                     feederName = feederName,
                     feederCode = feederCode,
                     feederCategory = item.optString("FEEDER_CATEGORY", "")
+                )
             )
-            )
-            Log.d(TAG, "Added feeder: $feederName ($feederCode)")
+            Log.d(TAG, "Added feeder: $feederName (${feederCode ?: "NO CODE"})")
         }
 
         Log.d(TAG, "Parsed ${list.size} feeders")
@@ -411,10 +414,12 @@ class DailyParameterViewFragment : Fragment() {
 
     /**
      * Fetch consumption data for specific feeder and date
+     * ✅ FIXED: Added feederName parameter and nullable feederId
      */
     private suspend fun fetchConsumptionData(
         token: String,
-        feederId: String,
+        feederId: String?,
+        feederName: String,
         date: String
     ): List<DailyConsumptionData> = withContext(Dispatchers.IO) {
         val url = URL(CONSUMPTION_URL)
@@ -430,9 +435,11 @@ class DailyParameterViewFragment : Fragment() {
             connection.doOutput = true
             connection.doInput = true
 
-            // Create JSON body
+            // ✅ FIXED: Create JSON body with conditional feeder_id
             val jsonBody = JSONObject().apply {
-                put("feeder_id", feederId)
+                // Only include feeder_id if it's not null
+                feederId?.let { put("feeder_id", it) }
+                put("feeder_name", feederName)  // Always include name as fallback
                 put("date", date)
             }
 
@@ -473,12 +480,6 @@ class DailyParameterViewFragment : Fragment() {
     /**
      * Parse consumption data JSON response
      */
-    /**
-     * Parse consumption data JSON response
-     */
-    /**
-     * Parse consumption data JSON response
-     */
     private fun parseConsumptionData(jsonString: String): List<DailyConsumptionData> {
         val list = mutableListOf<DailyConsumptionData>()
         val jsonObject = JSONObject(jsonString)
@@ -500,13 +501,16 @@ class DailyParameterViewFragment : Fragment() {
             // LOG EACH ROW
             Log.d(TAG, "  Row $i - Feeder: '$feederName', Category: '$category'")
 
+            // ✅ FIXED: Handle null FEEDER_CODE properly
+            val feederCode = if (item.isNull("FEEDER_CODE")) null else item.optString("FEEDER_CODE")
+
             list.add(
                 DailyConsumptionData(
                     id = item.optString("ID", ""),
                     date = item.optString("DATE", ""),
                     stationName = item.optString("STATION_NAME", ""),
                     feederName = feederName,
-                    feederCode = item.optString("FEEDER_CODE", ""),
+                    feederCode = feederCode,
                     feederCategory = category,
                     remark = item.optString("REMARK", ""),
                     totalConsumption = if (item.isNull("TOTAL_CONSUMPTION")) "" else item.optString("TOTAL_CONSUMPTION", ""),
@@ -528,23 +532,25 @@ class DailyParameterViewFragment : Fragment() {
 
 /**
  * Data class for feeder list item
+ * ✅ FIXED: Made feederId and feederCode nullable
  */
 data class FeederItem(
-    val feederId: String,
+    val feederId: String?,
     val feederName: String,
-    val feederCode: String,
+    val feederCode: String?,
     val feederCategory: String
 )
 
 /**
  * Data class for consumption data
+ * ✅ FIXED: Made feederCode nullable
  */
 data class DailyConsumptionData(
     val id: String,
     val date: String,
     val stationName: String,
     val feederName: String,
-    val feederCode: String,
+    val feederCode: String?,
     val feederCategory: String,
     val remark: String,
     var totalConsumption: String,
@@ -554,10 +560,11 @@ data class DailyConsumptionData(
 
 /**
  * Data class for display row
+ * ✅ FIXED: Made feederCode nullable
  */
 data class DailyDataRow(
     val feederName: String,
-    var feederCode: String,
+    var feederCode: String?,
     var feederCategory: String,
     var remark: String,
     var totalConsumption: String,

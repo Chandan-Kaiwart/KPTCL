@@ -18,11 +18,11 @@
                 android:icon="@drawable/ic_add"
                 android:title="Feeder Hourly Entry"
                 app:iconTint="@color/icon_tint" />
-            <item
-                android:id="@+id/hourlyEdit"
-                android:icon="@drawable/ic_edit"
-                android:title="Feeder Hourly Edit"
-                app:iconTint="@color/icon_tint" />
+<!--            <item-->
+<!--                android:id="@+id/hourlyEdit"-->
+<!--                android:icon="@drawable/ic_edit"-->
+<!--                android:title="Feeder Hourly Edit"-->
+<!--                app:iconTint="@color/icon_tint" />-->
             <item
                 android:id="@+id/hourlyView"
                 android:icon="@drawable/ic_view"
@@ -40,11 +40,11 @@
                 android:icon="@drawable/ic_add"
                 android:title="Feeder Daily Entry"
                 app:iconTint="@color/icon_tint" />
-            <item
-                android:id="@+id/dailyEdit"
-                android:icon="@drawable/ic_edit"
-                android:title="Feeder Daily Edit"
-                app:iconTint="@color/icon_tint" />
+<!--            <item-->
+<!--                android:id="@+id/dailyEdit"-->
+<!--                android:icon="@drawable/ic_edit"-->
+<!--                android:title="Feeder Daily Edit"-->
+<!--                app:iconTint="@color/icon_tint" />-->
             <item
                 android:id="@+id/dailyView"
                 android:icon="@drawable/ic_view"

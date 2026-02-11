@@ -41,7 +41,7 @@ class CreateTicketFragment : Fragment() {
 
     companion object {
         private const val TAG = "CreateTicket"
-        private const val API_URL = "http://62.72.59.119:7000/api/ticket/create"
+        private const val API_URL = "http://62.72.59.119:9000/api/ticket/create"
         private const val TIMEOUT = 15000
     }
 

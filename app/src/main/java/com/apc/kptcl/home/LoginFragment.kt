@@ -64,7 +64,7 @@ class LoginFragment : Fragment() {
 
     companion object {
         private const val TAG = "LoginFragment"
-        private const val BASE_URL = "http://62.72.59.119:7000"
+        private const val BASE_URL = "http://62.72.59.119:9000"
         private const val APK_DOWNLOAD_URL = "https://api.vidyut-suvidha.in/apk"
         private const val APK_FILE_NAME = "KPTCL_App_Latest.apk"
     }

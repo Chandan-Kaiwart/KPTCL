@@ -14,14 +14,17 @@ class DailyDataAdapter : RecyclerView.Adapter<DailyDataAdapter.ViewHolder>() {
 
     private val rows = mutableListOf<DailyDataRow>()
 
+    companion object {
+        private const val TAG = "DailyDataAdapter"
+    }
+
     fun submitList(list: List<DailyDataRow>) {
         rows.clear()
         rows.addAll(list)
 
-        // ADD THIS LOG
-        Log.d("DailyDataAdapter", "📋 submitList called with ${list.size} rows")
+        Log.d(TAG, "📋 submitList called with ${list.size} rows")
         list.forEachIndexed { index, row ->
-            Log.d("DailyDataAdapter", "  Row $index: Feeder=${row.feederName}, Category='${row.feederCategory}'")
+            Log.d(TAG, "  Row $index: Feeder=${row.feederName}, Category='${row.feederCategory}'")
         }
 
         notifyDataSetChanged()
@@ -53,17 +56,61 @@ class DailyDataAdapter : RecyclerView.Adapter<DailyDataAdapter.ViewHolder>() {
         fun bind(row: DailyDataRow) {
             currentRow = row
 
-            // ADD THIS LOG - debugging ke liye
-            Log.d("DailyDataAdapter", "🔍 Binding row - Feeder: ${row.feederName}, Category: '${row.feederCategory}'")
+            Log.d(TAG, "🔍 Binding row - Feeder: ${row.feederName}, Category: '${row.feederCategory}'")
 
-            // Set all values as TextViews (read-only display)
-            binding.tvFeederName.text = row.feederName
-            binding.etFeederCode.text = row.feederCode
-            binding.etFeederCategory.text = row.feederCategory
-            binding.etRemark.text = row.remark
-            binding.etTotalConsumption.text = row.totalConsumption
-            binding.etSupply3PH.text = row.supply3PH
-            binding.etSupply1PH.text = row.supply1PH
+            // ✅ CRITICAL FIX: Handle null/empty values properly
+            binding.tvFeederName.text = row.feederName.ifEmpty { "-" }
+
+            binding.etFeederCode.text = row.feederCode?.ifEmpty { "-" }
+
+            binding.etFeederCategory.text = row.feederCategory.ifEmpty { "-" }
+
+            // ✅ Handle nullable String properly
+            binding.etRemark.text = if (row.remark.isNullOrEmpty()) {
+                "-"
+            } else {
+                row.remark
+            }
+
+            // ✅ Handle numeric values - show number or dash
+            binding.etTotalConsumption.text = if (row.totalConsumption.isNullOrEmpty()) {
+                "-"
+            } else {
+                // Try to format as number
+                try {
+                    val value = row.totalConsumption.toDoubleOrNull()
+                    if (value != null) {
+                        // Format with 2 decimal places
+                        String.format("%.2f", value)
+                    } else {
+                        row.totalConsumption
+                    }
+                } catch (e: Exception) {
+                    row.totalConsumption
+                }
+            }
+
+            binding.etSupply3PH.text = if (row.supply3PH.isNullOrEmpty()) {
+                "-"
+            } else {
+                row.supply3PH
+            }
+
+            binding.etSupply1PH.text = if (row.supply1PH.isNullOrEmpty()) {
+                "-"
+            } else {
+                row.supply1PH
+            }
+
+            // ✅ DEBUG: Log what's being displayed
+            Log.d(TAG, "  📝 Display values:")
+            Log.d(TAG, "     Feeder Name: '${binding.tvFeederName.text}'")
+            Log.d(TAG, "     Feeder Code: '${binding.etFeederCode.text}'")
+            Log.d(TAG, "     Category: '${binding.etFeederCategory.text}'")
+            Log.d(TAG, "     Remark: '${binding.etRemark.text}'")
+            Log.d(TAG, "     Total Consumption: '${binding.etTotalConsumption.text}'")
+            Log.d(TAG, "     Supply 3PH: '${binding.etSupply3PH.text}'")
+            Log.d(TAG, "     Supply 1PH: '${binding.etSupply1PH.text}'")
         }
 
         private fun setupTextInput(

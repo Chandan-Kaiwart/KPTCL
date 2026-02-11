@@ -152,14 +152,14 @@ class MainActivity : AppCompatActivity() {
                             }
                         })
                 }
-                R.id.hourlyEdit -> {
-                    navController.navigate(R.id.feederEditFragment, null,
-                        navOptions {
-                            popUpTo(R.id.homeFragment) {
-                                inclusive = false
-                            }
-                        })
-                }
+//                R.id.hourlyEdit -> {
+//                    navController.navigate(R.id.feederEditFragment, null,
+//                        navOptions {
+//                            popUpTo(R.id.homeFragment) {
+//                                inclusive = false
+//                            }
+//                        })
+//                }
                 R.id.dailyEntry -> {
                     navController.navigate(R.id.consumptionEntryFragment, null,
                         navOptions {
@@ -168,14 +168,14 @@ class MainActivity : AppCompatActivity() {
                             }
                         })
                 }
-                R.id.dailyEdit -> {
-                    navController.navigate(R.id.elogEntryFragment, null,
-                        navOptions {
-                            popUpTo(R.id.homeFragment) {
-                                inclusive = false
-                            }
-                        })
-                }
+//                R.id.dailyEdit -> {
+//                    navController.navigate(R.id.elogEntryFragment, null,
+//                        navOptions {
+//                            popUpTo(R.id.homeFragment) {
+//                                inclusive = false
+//                            }
+//                        })
+//                }
                 R.id.dailyView -> {
                     navController.navigate(R.id.dailyParameterEntryFragment, null,
                         navOptions {

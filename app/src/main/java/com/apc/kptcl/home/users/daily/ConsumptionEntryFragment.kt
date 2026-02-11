@@ -11,7 +11,6 @@ import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.EditText
-import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -58,9 +57,9 @@ class ConsumptionEntryFragment : Fragment() {
 
     companion object {
         private const val TAG = "ConsumptionEntry"
-        private const val FEEDER_LIST_URL = "http://62.72.59.119:7000/api/feeder/list"
-        private const val CONSUMPTION_URL = "http://62.72.59.119:7000/api/feeder/consumption" // ✅ For fetching
-        private const val SAVE_URL = "http://62.72.59.119:7000/api/feeder/consumption/save"
+        private const val FEEDER_LIST_URL = "http://62.72.59.119:9000/api/feeder/list"
+        private const val CONSUMPTION_URL = "http://62.72.59.119:9000/api/feeder/consumption"
+        private const val SAVE_URL = "http://62.72.59.119:9000/api/feeder/consumption/save"
         private const val TIMEOUT = 15000
     }
 
@@ -268,7 +267,7 @@ class ConsumptionEntryFragment : Fragment() {
             // Create spinner adapter
             val spinnerAdapter = ArrayAdapter(
                 requireContext(),
-                R.layout.spinner_item_black,  // ← Use custom layout
+                R.layout.spinner_item_black,
                 feederDisplayList
             )
             spinnerAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item_black)
@@ -305,7 +304,8 @@ class ConsumptionEntryFragment : Fragment() {
     }
 
     /**
-     * ✅ NEW: Fetch existing data for selected feeder and display
+     * ✅ FIXED: Fetch existing data for selected feeder and display
+     * Now handles null feeder codes by using feeder_name
      */
     private fun fetchExistingDataAndDisplay(selected: FeederData) {
         lifecycleScope.launch {
@@ -315,10 +315,11 @@ class ConsumptionEntryFragment : Fragment() {
 
                 Log.d(TAG, "📥 Fetching existing data for ${selected.feederName} on $selectedDate")
 
-                // Try to fetch existing data
+                // ✅ FIX: Pass both feederCode AND feederName
                 val existingData = fetchExistingConsumptionData(
                     token,
-                    selected.feederCode,
+                    feederId = selected.feederCode,
+                    feederName = selected.feederName,
                     selectedDate
                 )
 
@@ -327,10 +328,10 @@ class ConsumptionEntryFragment : Fragment() {
                     feederName = selected.feederName,
                     feederCode = selected.feederCode,
                     feederCategory = selected.feederCategory,
-                    remark = existingData?.remark ?: "PROPER",  // ✅ Pre-fill or default
-                    totalConsumption = existingData?.totalConsumption,  // ✅ Pre-fill or null
-                    supply3ph = existingData?.supply3ph ?: "",  // ✅ Pre-fill or empty
-                    supply1ph = existingData?.supply1ph ?: ""  // ✅ Pre-fill or empty
+                    remark = existingData?.remark ?: "PROPER",
+                    totalConsumption = existingData?.totalConsumption,
+                    supply3ph = existingData?.supply3ph ?: "",
+                    supply1ph = existingData?.supply1ph ?: ""
                 )
 
                 selectedFeederData = consumptionData
@@ -362,11 +363,13 @@ class ConsumptionEntryFragment : Fragment() {
     }
 
     /**
-     * ✅ NEW: Fetch existing consumption data from API
+     * ✅ FIXED: Fetch existing consumption data from API
+     * Now handles null feeder codes by using feeder_name in request
      */
     private suspend fun fetchExistingConsumptionData(
         token: String,
-        feederId: String,
+        feederId: String?,
+        feederName: String?,
         date: String
     ): EntryConsumptionData? = withContext(Dispatchers.IO) {
         var connection: HttpURLConnection? = null
@@ -383,9 +386,11 @@ class ConsumptionEntryFragment : Fragment() {
             connection.doOutput = true
             connection.doInput = true
 
-            // Create JSON body
+            // ✅ FIX: Build request body based on whether code exists
             val jsonBody = JSONObject().apply {
-                put("feeder_id", feederId)
+                // Only include feeder_id if it's not null
+                feederId?.let { put("feeder_id", it) }
+                put("feeder_name", feederName)  // ✅ Always include feeder_name as fallback
                 put("date", date)
             }
 
@@ -405,7 +410,8 @@ class ConsumptionEntryFragment : Fragment() {
                 val response = reader.readText()
                 reader.close()
 
-                Log.d(TAG, "📥 Response: ${response.take(200)}...")
+                // ✅ LOG FULL RESPONSE
+                Log.d(TAG, "📥 FULL Response: $response")
 
                 // Parse response
                 val jsonObject = JSONObject(response)
@@ -413,19 +419,37 @@ class ConsumptionEntryFragment : Fragment() {
 
                 if (success) {
                     val dataArray = jsonObject.optJSONArray("data")
+
+                    // ✅ LOG ARRAY
+                    Log.d(TAG, "📊 Data array length: ${dataArray?.length() ?: 0}")
+
                     if (dataArray != null && dataArray.length() > 0) {
                         val item = dataArray.getJSONObject(0)
 
+                        // ✅ LOG EACH FIELD
+                        Log.d(TAG, "🔍 FEEDER_NAME: ${item.optString("FEEDER_NAME")}")
+                        Log.d(TAG, "🔍 TOTAL_CONSUMPTION: ${item.optString("TOTAL_CONSUMPTION")}")
+                        Log.d(TAG, "🔍 SUPPLY_3PH: ${item.optString("SUPPLY_3PH")}")
+                        Log.d(TAG, "🔍 SUPPLY_1PH: ${item.optString("SUPPLY_1PH")}")
+                        Log.d(TAG, "🔍 REMARK: ${item.optString("REMARK")}")
+
+                        val totalConsumption = item.optDouble("TOTAL_CONSUMPTION")
+                        Log.d(TAG, "🔍 TC as double: $totalConsumption, isNaN: ${totalConsumption.isNaN()}")
+
                         // Return existing data
-                        return@withContext EntryConsumptionData(
+                        val result = EntryConsumptionData(
                             feederName = item.optString("FEEDER_NAME", ""),
                             feederCode = feederId,
                             feederCategory = item.optString("FEEDER_CATEGORY", ""),
                             remark = item.optString("REMARK", "PROPER"),
-                            totalConsumption = item.optDouble("TOTAL_CONSUMPTION").takeIf { !it.isNaN() },
+                            totalConsumption = totalConsumption.takeIf { !it.isNaN() },
                             supply3ph = item.optString("SUPPLY_3PH", ""),
                             supply1ph = item.optString("SUPPLY_1PH", "")
                         )
+
+                        Log.d(TAG, "✅ Returning: TC=${result.totalConsumption}, 3PH=${result.supply3ph}, 1PH=${result.supply1ph}")
+
+                        return@withContext result
                     }
                 }
             } else {
@@ -436,6 +460,7 @@ class ConsumptionEntryFragment : Fragment() {
 
         } catch (e: Exception) {
             Log.w(TAG, "⚠️ Error fetching existing data: ${e.message}")
+            e.printStackTrace()
             null // Return null on error
         } finally {
             connection?.disconnect()
@@ -506,7 +531,7 @@ class ConsumptionEntryFragment : Fragment() {
                 for (i in 0 until dataArray.length()) {
                     val item = dataArray.getJSONObject(i)
                     val feeder = FeederData(
-                        feederCode = item.optString("FEEDER_CODE", ""),
+                        feederCode = if (item.isNull("FEEDER_CODE")) null else item.optString("FEEDER_CODE"),
                         feederName = item.optString("FEEDER_NAME", ""),
                         feederCategory = item.optString("FEEDER_CATEGORY", "")
                     )
@@ -660,7 +685,8 @@ class ConsumptionEntryFragment : Fragment() {
                     put("date", date)
                     put("station_name", stationName)
                     put("feeder_name", item.feederName)
-                    put("feeder_code", item.feederCode)
+                    // Only include feeder_code if it's not null
+                    item.feederCode?.let { put("feeder_code", it) }
                     put("feeder_category", item.feederCategory ?: "")
                     put("remark", item.remark ?: "")
                     put("total_consumption", item.totalConsumption ?: 0.0)
@@ -783,7 +809,7 @@ data class FeedersResponse(
  * Feeder data from API
  */
 data class FeederData(
-    val feederCode: String,
+    val feederCode: String?,
     val feederName: String,
     val feederCategory: String
 )
@@ -793,7 +819,7 @@ data class FeederData(
  */
 data class EntryConsumptionData(
     val feederName: String,
-    val feederCode: String,
+    val feederCode: String?,
     var feederCategory: String?,
     var remark: String?,
     var totalConsumption: Double?,
@@ -854,44 +880,54 @@ class EntryConsumptionDataAdapter(
         private val tvCategory: TextView = itemView.findViewById(R.id.tvCategory)
         private val etRemark: EditText = itemView.findViewById(R.id.etRemark)
         private val etTotal: EditText = itemView.findViewById(R.id.etTotal)
-        private val spinnerSupply3ph: Spinner = itemView.findViewById(R.id.spinnerSupply3ph)
-        private val spinnerSupply1ph: Spinner = itemView.findViewById(R.id.spinnerSupply1ph)
+        private val etSupply3ph: EditText = itemView.findViewById(R.id.etSupply3ph)
+        private val etSupply1ph: EditText = itemView.findViewById(R.id.etSupply1ph)
 
         init {
-            Log.d("ConsumptionEntry", "🔧 Setting up TIME spinners")
+            Log.d("ConsumptionEntry", "🔧 Setting up time input fields")
 
-            // Create time options: --Select or type--, 00:00, 00:01, ... 23:59
-            val timeOptions = mutableListOf<String>()
-            timeOptions.add("--Select or type--")
+            // Add TextWatcher for auto-formatting HH:MM
+            setupTimeInputFormatting(etSupply3ph)
+            setupTimeInputFormatting(etSupply1ph)
 
-            // Generate all time values from 00:00 to 23:59
-            for (hour in 0..23) {
-                for (minute in 0..59) {
-                    timeOptions.add(String.format("%02d:%02d", hour, minute))
+            Log.d("ConsumptionEntry", "✅ Time input fields configured")
+        }
+
+        /**
+         * Setup automatic HH:MM formatting as user types
+         */
+        private fun setupTimeInputFormatting(editText: EditText) {
+            editText.addTextChangedListener(object : TextWatcher {
+                private var isFormatting = false
+
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+
+                override fun afterTextChanged(s: Editable?) {
+                    if (isFormatting) return
+
+                    isFormatting = true
+                    val input = s.toString().replace(":", "")
+
+                    if (input.length >= 2) {
+                        val formatted = buildString {
+                            append(input.substring(0, 2))
+                            if (input.length > 2) {
+                                append(":")
+                                append(input.substring(2, minOf(4, input.length)))
+                            }
+                        }
+
+                        if (formatted != s.toString()) {
+                            editText.setText(formatted)
+                            editText.setSelection(formatted.length)
+                        }
+                    }
+
+                    isFormatting = false
                 }
-            }
-
-            Log.d("ConsumptionEntry", "⏰ Generated ${timeOptions.size} time options")
-
-            // Setup 3PH spinner with time values
-            val adapter3ph = ArrayAdapter(
-                itemView.context,
-                android.R.layout.simple_spinner_item,
-                timeOptions
-            )
-            adapter3ph.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-            spinnerSupply3ph.adapter = adapter3ph
-
-            // Setup 1PH spinner with time values
-            val adapter1ph = ArrayAdapter(
-                itemView.context,
-                android.R.layout.simple_spinner_item,
-                timeOptions
-            )
-            adapter1ph.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-            spinnerSupply1ph.adapter = adapter1ph
-
-            Log.d("ConsumptionEntry", "✅ Time spinners configured")
+            })
         }
 
         fun bind(data: EntryConsumptionData, date: String, station: String) {
@@ -900,66 +936,103 @@ class EntryConsumptionDataAdapter(
             etRemark.setText(data.remark ?: "")
             etTotal.setText(data.totalConsumption?.toString() ?: "")
 
-            // Set spinner selections based on saved time values
-            // Find position in time list
-            val timeOptions = mutableListOf<String>()
-            timeOptions.add("--Select or type--")
-            for (hour in 0..23) {
-                for (minute in 0..59) {
-                    timeOptions.add(String.format("%02d:%02d", hour, minute))
-                }
-            }
-
-            val pos3ph = if (data.supply3ph.isNullOrEmpty()) {
-                0
-            } else {
-                timeOptions.indexOf(data.supply3ph).takeIf { it >= 0 } ?: 0
-            }
-            spinnerSupply3ph.setSelection(pos3ph)
-
-            val pos1ph = if (data.supply1ph.isNullOrEmpty()) {
-                0
-            } else {
-                timeOptions.indexOf(data.supply1ph).takeIf { it >= 0 } ?: 0
-            }
-            spinnerSupply1ph.setSelection(pos1ph)
+            // Set time values from data
+            etSupply3ph.setText(data.supply3ph ?: "")
+            etSupply1ph.setText(data.supply1ph ?: "")
 
             // Text watchers
             setupTextWatcher(etRemark) { data.remark = it }
             setupTextWatcher(etTotal) { data.totalConsumption = it.toDoubleOrNull() }
 
-            // Spinner listeners - save selected time value
-            spinnerSupply3ph.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                    // Set text color to black after selection
-                    (view as? TextView)?.setTextColor(android.graphics.Color.BLACK)
-
-                    if (position > 0) {
-                        data.supply3ph = parent?.getItemAtPosition(position).toString()
-                        Log.d("ConsumptionEntry", "⏰ 3PH time = ${data.supply3ph}")
-                    } else {
-                        data.supply3ph = ""
-                    }
-                }
-                override fun onNothingSelected(parent: AdapterView<*>?) {}
+            // Time validation watchers with 24-hour total check
+            setupTimeWatcher(etSupply3ph, etSupply1ph) { time3ph ->
+                data.supply3ph = time3ph
+                Log.d("ConsumptionEntry", "⏰ 3PH time = $time3ph")
             }
 
-            spinnerSupply1ph.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                    // Set text color to black after selection
-                    (view as? TextView)?.setTextColor(android.graphics.Color.BLACK)
-
-                    if (position > 0) {
-                        data.supply1ph = parent?.getItemAtPosition(position).toString()
-                        Log.d("ConsumptionEntry", "⏰ 1PH time = ${data.supply1ph}")
-                    } else {
-                        data.supply1ph = ""
-                    }
-                }
-                override fun onNothingSelected(parent: AdapterView<*>?) {}
+            setupTimeWatcher(etSupply1ph, etSupply3ph) { time1ph ->
+                data.supply1ph = time1ph
+                Log.d("ConsumptionEntry", "⏰ 1PH time = $time1ph")
             }
         }
 
+        /**
+         * Setup time watcher with validation
+         * Validates HH:MM format and ensures 3PH + 1PH <= 24:00
+         */
+        private fun setupTimeWatcher(
+            currentField: EditText,
+            otherField: EditText,
+            onTimeChanged: (String) -> Unit
+        ) {
+            currentField.addTextChangedListener(object : TextWatcher {
+                override fun afterTextChanged(s: Editable?) {
+                    val timeStr = s.toString().trim()
+
+                    // Skip if empty
+                    if (timeStr.isEmpty()) {
+                        onTimeChanged("")
+                        currentField.error = null
+                        return
+                    }
+
+                    // Validate HH:MM format
+                    if (!isValidTimeFormat(timeStr)) {
+                        currentField.error = "Invalid format. Use HH:MM (00:00 to 23:59)"
+                        return
+                    }
+
+                    // Parse current and other time
+                    val currentMinutes = parseTimeToMinutes(timeStr)
+                    val otherTimeStr = otherField.text.toString().trim()
+                    val otherMinutes = if (otherTimeStr.isNotEmpty() && isValidTimeFormat(otherTimeStr)) {
+                        parseTimeToMinutes(otherTimeStr)
+                    } else {
+                        0
+                    }
+
+                    // Validate total <= 24 hours (1440 minutes)
+                    val totalMinutes = currentMinutes + otherMinutes
+                    if (totalMinutes > 1440) {
+                        currentField.error = "❌ Total supply time (3PH + 1PH) cannot exceed 24:00 hours"
+                        return
+                    }
+
+                    // All validations passed
+                    currentField.error = null
+                    onTimeChanged(timeStr)
+                }
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            })
+        }
+
+        /**
+         * Validate HH:MM format
+         */
+        private fun isValidTimeFormat(time: String): Boolean {
+            if (!time.matches(Regex("^\\d{2}:\\d{2}$"))) return false
+
+            val parts = time.split(":")
+            val hours = parts[0].toIntOrNull() ?: return false
+            val minutes = parts[1].toIntOrNull() ?: return false
+
+            return hours in 0..23 && minutes in 0..59
+        }
+
+        /**
+         * Convert HH:MM to total minutes
+         */
+        private fun parseTimeToMinutes(time: String): Int {
+            val parts = time.split(":")
+            val hours = parts[0].toIntOrNull() ?: 0
+            val minutes = parts[1].toIntOrNull() ?: 0
+            return (hours * 60) + minutes
+        }
+
+        /**
+         * Setup generic text watcher
+         */
         private fun setupTextWatcher(editText: EditText, onTextChanged: (String) -> Unit) {
             editText.addTextChangedListener(object : TextWatcher {
                 override fun afterTextChanged(s: Editable?) {
