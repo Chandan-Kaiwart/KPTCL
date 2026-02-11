@@ -25,7 +25,7 @@ class FeederViewFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val calendar = Calendar.getInstance()
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) // ✅ Display format dd-MM-yyyy
+    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
     // Repository instance
     private val repository = FeederHourlyRepository()
@@ -33,7 +33,7 @@ class FeederViewFragment : Fragment() {
     private lateinit var adapter: FeederHourlyViewAdapter
     private var allHourlyData = listOf<FeederHourlyData>()
     private var feederList = listOf<FeederInfo>()
-    private var selectedFeederId: String? = null
+    private var selectedFeederId: String? = null  // ✅ Now nullable
     private var selectedFeederName: String? = null
 
     companion object {
@@ -77,7 +77,7 @@ class FeederViewFragment : Fragment() {
         binding.rvViewData.apply {
             layoutManager = androidx.recyclerview.widget.LinearLayoutManager(
                 context,
-                androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL, // ✅ Keep horizontal
+                androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL,
                 false
             )
             this.adapter = this@FeederViewFragment.adapter
@@ -88,7 +88,6 @@ class FeederViewFragment : Fragment() {
             searchFeederData()
         }
 
-
         Log.d(TAG, "Views setup complete")
     }
 
@@ -98,19 +97,17 @@ class FeederViewFragment : Fragment() {
             { _, year, month, dayOfMonth ->
                 calendar.set(year, month, dayOfMonth)
                 binding.etDate.setText(dateFormat.format(calendar.time))
-
             },
             calendar.get(Calendar.YEAR),
             calendar.get(Calendar.MONTH),
             calendar.get(Calendar.DAY_OF_MONTH)
         )
 
-        // ✅ FUTURE DATES DISABLE - Present date se aage select nahi hoga
+        // ✅ FUTURE DATES DISABLE
         datePickerDialog.datePicker.maxDate = System.currentTimeMillis()
 
         datePickerDialog.show()
     }
-
 
     private fun loadAllFeeders() {
         val token = SessionManager.getToken(requireContext())
@@ -143,7 +140,6 @@ class FeederViewFragment : Fragment() {
                         ).show()
                     } else {
                         Log.w(TAG, "⚠️ No feeders found in API response!")
-
                         Snackbar.make(
                             binding.root,
                             "No feeders found",
@@ -154,13 +150,11 @@ class FeederViewFragment : Fragment() {
                 } else {
                     val error = result.exceptionOrNull()?.message ?: "Unknown error"
                     Log.e(TAG, "❌ Error loading feeders: $error")
-
                     binding.btnSearch.isEnabled = false
                     Snackbar.make(binding.root, "Error loading feeders: $error", Snackbar.LENGTH_LONG).show()
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Exception loading feeders", e)
-
                 binding.btnSearch.isEnabled = false
                 Snackbar.make(binding.root, "Error: ${e.message}", Snackbar.LENGTH_LONG).show()
             }
@@ -173,8 +167,9 @@ class FeederViewFragment : Fragment() {
             return
         }
 
+        // ✅ FIXED: Show code if available, else show "NO CODE"
         val feederDisplayList = feederList.map {
-            "${it.feederName} (${it.feederId})"
+            "${it.feederName} (${it.feederId ?: "NO CODE"})"
         }
 
         Log.d(TAG, "Setting up dropdown with ${feederDisplayList.size} items")
@@ -192,14 +187,13 @@ class FeederViewFragment : Fragment() {
         binding.actvStation.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 if (position < feederList.size) {
-                    selectedFeederId = feederList[position].feederId
+                    selectedFeederId = feederList[position].feederId  // ✅ Can be null
                     selectedFeederName = feederList[position].feederName
-                    Log.d(TAG, "✅ Selected: $selectedFeederName (ID: $selectedFeederId)")
+                    Log.d(TAG, "✅ Selected: $selectedFeederName (ID: ${selectedFeederId ?: "NO CODE"})")
                 }
             }
 
             override fun onNothingSelected(parent: AdapterView<*>?) {
-                // Optional: Handle when nothing is selected
                 Log.d(TAG, "No feeder selected")
             }
         }
@@ -208,7 +202,8 @@ class FeederViewFragment : Fragment() {
     }
 
     private fun searchFeederData() {
-        if (selectedFeederId == null) {
+        // ✅ FIXED: Check for feederName instead of feederId
+        if (selectedFeederName == null) {
             Log.w(TAG, "No feeder selected")
             Snackbar.make(binding.root, "Please select a feeder first", Snackbar.LENGTH_SHORT).show()
             return
@@ -224,20 +219,19 @@ class FeederViewFragment : Fragment() {
         binding.btnSearch.isEnabled = false
         binding.btnSearch.text = "Loading..."
 
-        Log.d(TAG, "Starting search for feeder: $selectedFeederId")
+        Log.d(TAG, "Starting search for feeder: $selectedFeederName (ID: ${selectedFeederId ?: "NONE"})")
 
         lifecycleScope.launch {
             try {
-                Log.d(TAG, "Fetching hourly data for feeder: $selectedFeederId")
-
                 val selectedDate = binding.etDate.text.toString()
-                Log.d(TAG, "🔍 Searching for date: $selectedDate")
+                Log.d(TAG, "📅 Searching for date: $selectedDate")
 
-                // ✅ Pass date to repository
+                // ✅ FIXED: Pass both feederId and feederName
                 val result = repository.fetchFeederHourlyData(
-                    feederId = selectedFeederId!!,
-                    date = selectedDate,  // ✅ Add date parameter
+                    feederId = selectedFeederId,      // ✅ Can be null
+                    feederName = selectedFeederName!!, // ✅ Required
                     token = token,
+                    date = selectedDate,
                     limit = 100
                 )
 

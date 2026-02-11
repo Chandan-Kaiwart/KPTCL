@@ -14,6 +14,7 @@ import java.util.*
 
 /**
  * Repository class for fetching feeder hourly data from API
+ * ✅ FIXED: Handles null FEEDER_CODE properly
  */
 class FeederHourlyRepository {
 
@@ -27,6 +28,7 @@ class FeederHourlyRepository {
 
     /**
      * Fetch all available feeders from the dedicated feeder list API
+     * ✅ FIXED: Properly handles null FEEDER_CODE
      */
     suspend fun fetchAllFeeders(token: String): Result<List<FeederInfo>> =
         withContext(Dispatchers.IO) {
@@ -79,6 +81,7 @@ class FeederHourlyRepository {
 
     /**
      * Parse feeder list API response
+     * ✅ FIXED: Properly handles null FEEDER_CODE
      */
     private fun parseFeederListResponse(jsonString: String): List<FeederInfo> {
         val feeders = mutableListOf<FeederInfo>()
@@ -90,25 +93,34 @@ class FeederHourlyRepository {
                 throw Exception(jsonObject.optString("message", "Failed to fetch feeders"))
             }
 
-            val station = jsonObject.optString("station", "")
+            val station = jsonObject.optString("username", "")
             val dataArray = jsonObject.optJSONArray("data")
 
             if (dataArray != null) {
                 for (i in 0 until dataArray.length()) {
                     val item = dataArray.getJSONObject(i)
-                    val feederCode = item.optString("FEEDER_CODE", "")
+
+                    // ✅ FIXED: Properly handle null FEEDER_CODE
+                    val feederCode = if (item.isNull("FEEDER_CODE")) {
+                        null
+                    } else {
+                        val code = item.optString("FEEDER_CODE", "")
+                        if (code.isEmpty()) null else code
+                    }
+
                     val feederName = item.optString("FEEDER_NAME", "")
 
-                    if (feederCode.isNotEmpty() && feederName.isNotEmpty()) {
+                    // ✅ Only require feederName to be non-empty (code can be null)
+                    if (feederName.isNotEmpty()) {
                         feeders.add(
                             FeederInfo(
-                                feederId = feederCode,  // Use FEEDER_CODE as ID
+                                feederId = feederCode,  // ✅ Now nullable
                                 feederName = feederName,
                                 stationName = station,
-                                category = ""  // Not available in this API
+                                category = item.optString("FEEDER_CATEGORY", "")
                             )
                         )
-                        Log.d(TAG, "Added feeder: $feederName ($feederCode)")
+                        Log.d(TAG, "Added feeder: $feederName (${feederCode ?: "NO CODE"})")
                     }
                 }
             }
@@ -124,15 +136,17 @@ class FeederHourlyRepository {
 
     /**
      * Fetch hourly data for a specific feeder
+     * ✅ FIXED: Accepts both feeder_id and feeder_name
      */
     suspend fun fetchFeederHourlyData(
-        feederId: String,
+        feederId: String?,      // ✅ Made nullable
+        feederName: String,     // ✅ Added name parameter
         token: String,
         limit: Int = 24,
         date: String? = null
     ): Result<FeederHourlyResponse> = withContext(Dispatchers.IO) {
         try {
-            Log.d(TAG, "Fetching hourly data for feeder: $feederId")
+            Log.d(TAG, "Fetching hourly data for feeder: $feederName (ID: ${feederId ?: "NONE"})")
 
             val url = URL(HOURLY_ENDPOINT)
             val connection = url.openConnection() as HttpURLConnection
@@ -148,9 +162,11 @@ class FeederHourlyRepository {
                 doInput = true
             }
 
-            // Create request body
+            // ✅ FIXED: Send both feeder_id and feeder_name
             val requestBody = JSONObject().apply {
-                put("feeder_id", feederId)
+                // Only include feeder_id if not null
+                feederId?.let { put("feeder_id", it) }
+                put("feeder_name", feederName)  // ✅ Always include name as fallback
                 put("limit", limit)
                 if (date != null) {
                     put("date", date)
@@ -202,14 +218,18 @@ class FeederHourlyRepository {
      * Fetch data for multiple feeders
      */
     suspend fun fetchMultipleFeederData(
-        feederIds: List<String>,
+        feederIds: List<String?>,
+        feederNames: List<String>,
         token: String,
         limit: Int = 24
     ): Map<String, Result<FeederHourlyResponse>> = withContext(Dispatchers.IO) {
         val results = mutableMapOf<String, Result<FeederHourlyResponse>>()
 
-        feederIds.forEach { feederId ->
-            results[feederId] = fetchFeederHourlyData(feederId, token, limit)
+        feederIds.forEachIndexed { index, feederId ->
+            val feederName = feederNames.getOrNull(index) ?: ""
+            if (feederName.isNotEmpty()) {
+                results[feederName] = fetchFeederHourlyData(feederId, feederName, token, limit)
+            }
         }
 
         results
@@ -222,7 +242,7 @@ class FeederHourlyRepository {
         val jsonObject = JSONObject(jsonString)
 
         val success = jsonObject.optBoolean("success", false)
-        val station = jsonObject.optString("station", "")
+        val station = jsonObject.optString("username", "")
         val count = jsonObject.optInt("count", 0)
         val dataArray = jsonObject.optJSONArray("data") ?: return FeederHourlyResponse(
             success = success,
@@ -251,13 +271,21 @@ class FeederHourlyRepository {
             val dateString = item.optString("DATE", "")
             val formattedDate = formatDate(dateString)
 
+            // ✅ Handle nullable FEEDER_CODE
+            val feederCode = if (item.isNull("FEEDER_CODE")) {
+                null
+            } else {
+                val code = item.optString("FEEDER_CODE", "")
+                if (code.isEmpty()) null else code
+            }
+
             dataList.add(
                 FeederHourlyData(
                     id = item.optString("ID", ""),
                     date = formattedDate,
                     stationName = item.optString("STATION_NAME", ""),
                     feederName = item.optString("FEEDER_NAME", ""),
-                    feederCode = item.optString("FEEDER_CODE", ""),
+                    feederCode = feederCode,  // ✅ Now nullable
                     feederCategory = item.optString("FEEDER_CATEGORY", ""),
                     parameter = item.optString("PARAMETER", ""),
                     hourlyValues = hourlyValues
@@ -315,13 +343,14 @@ data class FeederHourlyResponse(
 
 /**
  * Data class for hourly feeder data
+ * ✅ FIXED: feederCode is now nullable
  */
 data class FeederHourlyData(
     val id: String,
     val date: String,
     val stationName: String,
     val feederName: String,
-    val feederCode: String,
+    val feederCode: String?,  // ✅ Made nullable
     val feederCategory: String,
     val parameter: String, // MW, MVAR, IR, IB, IY
     val hourlyValues: Map<String, Double?> // Hour (00-23) to value
@@ -329,9 +358,10 @@ data class FeederHourlyData(
 
 /**
  * Data class for feeder information
+ * ✅ FIXED: feederId is now nullable
  */
 data class FeederInfo(
-    val feederId: String,
+    val feederId: String?,    // ✅ Made nullable
     val feederName: String,
     val stationName: String,
     val category: String

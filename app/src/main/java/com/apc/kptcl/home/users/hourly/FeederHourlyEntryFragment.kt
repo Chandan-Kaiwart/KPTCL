@@ -58,7 +58,7 @@ class FeederHourlyEntryFragment : Fragment() {
     companion object {
         private const val TAG = "HourlyEntry"
         private const val FEEDER_LIST_URL = "http://62.72.59.119:9000/api/feeder/list"
-        private const val FETCH_URL = "http://62.72.59.119:9000/api/feeder/hourly-entry/fetch"
+        private const val FETCH_URL = "http://62.72.59.119:9000/api/feeder/hourly"
         private const val SAVE_URL = "http://62.72.59.119:9000/api/feeder/hourly-entry/save"
         private const val TIMEOUT = 15000
     }
@@ -202,19 +202,33 @@ class FeederHourlyEntryFragment : Fragment() {
             throw Exception(jsonObject.optString("message", "Failed"))
         }
 
-        station = jsonObject.optString("station", "")
+        station = jsonObject.optString("username", "")
         val dataArray = jsonObject.optJSONArray("data")
 
         if (dataArray != null) {
             for (i in 0 until dataArray.length()) {
                 val item = dataArray.getJSONObject(i)
+
+                // ✅ FIXED: Properly handle null FEEDER_CODE
+                val feederCode = if (item.isNull("FEEDER_CODE")) {
+                    null
+                } else {
+                    val code = item.optString("FEEDER_CODE", "")
+                    if (code.isEmpty()) null else code
+                }
+
+                val feederName = item.optString("FEEDER_NAME", "")
+                val feederCategory = item.optString("FEEDER_CATEGORY", "")
+
                 feeders.add(
                     FeederData(
-                        feederCode = item.optString("FEEDER_CODE", ""),
-                        feederName = item.optString("FEEDER_NAME", ""),
-                        feederCategory = item.optString("FEEDER_CATEGORY", "")
+                        feederCode = feederCode,  // ✅ Now nullable
+                        feederName = feederName,
+                        feederCategory = feederCategory
                     )
                 )
+
+                Log.d(TAG, "Added feeder: $feederName (${feederCode ?: "NO CODE"})")
             }
         }
 
@@ -224,7 +238,10 @@ class FeederHourlyEntryFragment : Fragment() {
     private fun setupFeederDropdown() {
         if (allFeeders.isEmpty()) return
 
-        val feederDisplayList = allFeeders.map { it.feederName }
+        // ✅ FIXED: Show code if available, else show "NO CODE"
+        val feederDisplayList = allFeeders.map {
+            "${it.feederName} (${it.feederCode ?: "NO CODE"})"
+        }
 
         val adapter = ArrayAdapter(
             requireContext(),
@@ -235,11 +252,11 @@ class FeederHourlyEntryFragment : Fragment() {
 
         binding.actvFeeder.adapter = adapter
 
-        // ✅ FIX: By default first feeder ko select karo
+        // ✅ Default select first feeder
         if (allFeeders.isNotEmpty()) {
             selectedFeeder = allFeeders[0]
-            binding.actvFeeder.setSelection(0)  // ← setText() ki jagah setSelection() use karo
-            Log.d(TAG, "✅ Default selected: ${selectedFeeder?.feederName} (${selectedFeeder?.feederCode})")
+            binding.actvFeeder.setSelection(0)
+            Log.d(TAG, "✅ Default selected: ${selectedFeeder?.feederName} (${selectedFeeder?.feederCode ?: "NO CODE"})")
 
             // ✅ Load data for first feeder automatically
             loadFeederData()
@@ -249,14 +266,14 @@ class FeederHourlyEntryFragment : Fragment() {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 if (position < allFeeders.size) {
                     selectedFeeder = allFeeders[position]
-                    Log.d(TAG, "🔹 Selected: ${selectedFeeder?.feederName}")
+                    Log.d(TAG, "🔹 Selected: ${selectedFeeder?.feederName} (${selectedFeeder?.feederCode ?: "NO CODE"})")
                     loadFeederData()
                 }
             }
 
             override fun onNothingSelected(parent: AdapterView<*>?) {
                 selectedFeeder = null
-                adapter.clear()
+                HourlyDataAdapter().clearData()
             }
         }
     }
@@ -284,12 +301,13 @@ class FeederHourlyEntryFragment : Fragment() {
             return
         }
 
-        Log.d(TAG, "📄 Loading data for ${feeder.feederName} on $date")
+        Log.d(TAG, "📄 Loading data for ${feeder.feederName} (Code: ${feeder.feederCode ?: "NONE"}) on $date")
 
         lifecycleScope.launch {
             try {
                 val result = withContext(Dispatchers.IO) {
-                    fetchFeederData(date, feeder.feederCode)
+                    // ✅ FIXED: Pass both code and name
+                    fetchFeederData(date, feeder.feederCode, feeder.feederName)
                 }
 
                 Log.d(TAG, "✅ Received ${result.size} rows")
@@ -332,6 +350,7 @@ class FeederHourlyEntryFragment : Fragment() {
                     }
                 }
 
+                // ✅ FIXED: Pass nullable code
                 adapter.submitList(rowList, feeder.feederName, feeder.feederCode)
                 Toast.makeText(context, "Data loaded", Toast.LENGTH_SHORT).show()
 
@@ -342,7 +361,12 @@ class FeederHourlyEntryFragment : Fragment() {
         }
     }
 
-    private suspend fun fetchFeederData(date: String, feederCode: String): List<ExistingHourlyData> = withContext(Dispatchers.IO) {
+    // ✅ FIXED: Accept nullable feederCode and feederName
+    private suspend fun fetchFeederData(
+        date: String,
+        feederCode: String?,
+        feederName: String
+    ): List<ExistingHourlyData> = withContext(Dispatchers.IO) {
         val token = SessionManager.getToken(requireContext())
         val url = URL(FETCH_URL)
         val connection = url.openConnection() as HttpURLConnection
@@ -357,10 +381,15 @@ class FeederHourlyEntryFragment : Fragment() {
                 doOutput = true
             }
 
+            // ✅ FIXED: Send both feeder_id and feeder_name
             val requestBody = JSONObject().apply {
                 put("date", date)
-                put("feeder_code", feederCode)
+                // Only include feeder_id if not null
+                feederCode?.let { put("feeder_id", it) }
+                put("feeder_name", feederName)  // Always include name as fallback
             }
+
+            Log.d(TAG, "📤 Fetch request: $requestBody")
 
             OutputStreamWriter(connection.outputStream).use { writer ->
                 writer.write(requestBody.toString())
@@ -368,11 +397,14 @@ class FeederHourlyEntryFragment : Fragment() {
             }
 
             val responseCode = connection.responseCode
+            Log.d(TAG, "📥 Fetch response code: $responseCode")
 
             if (responseCode == HttpURLConnection.HTTP_OK) {
                 val response = BufferedReader(InputStreamReader(connection.inputStream)).use {
                     it.readText()
                 }
+
+                Log.d(TAG, "📥 Fetch response: ${response.take(200)}...")
 
                 val jsonResponse = JSONObject(response)
                 val dataArray = jsonResponse.optJSONArray("data") ?: JSONArray()
@@ -389,15 +421,24 @@ class FeederHourlyEntryFragment : Fragment() {
                     while (keys.hasNext()) {
                         val key = keys.next()
                         if (key.matches(Regex("\\d{2}"))) {
-                            hoursMap[key] = item.optString(key, "")
+                            val value = item.optString(key, "")
+                            if (value.isNotEmpty()) {
+                                hoursMap[key] = value
+                            }
                         }
                     }
 
                     result.add(ExistingHourlyData(parameter, hoursMap))
                 }
 
+                Log.d(TAG, "✅ Parsed ${result.size} parameter rows")
                 result
             } else {
+                val errorMessage = connection.errorStream?.let { stream ->
+                    BufferedReader(InputStreamReader(stream)).use { it.readText() }
+                } ?: "HTTP Error: $responseCode"
+
+                Log.e(TAG, "❌ Fetch error: $errorMessage")
                 emptyList()
             }
         } finally {
@@ -420,14 +461,15 @@ class FeederHourlyEntryFragment : Fragment() {
 
         val rows = adapter.getHourlyData()
 
-        Log.d(TAG, "💾 Submitting ${rows.size} rows for ${feeder.feederName}")
+        Log.d(TAG, "💾 Submitting ${rows.size} rows for ${feeder.feederName} (Code: ${feeder.feederCode ?: "NONE"})")
 
         lifecycleScope.launch {
             try {
                 showLoading(true)
 
                 val result = withContext(Dispatchers.IO) {
-                    saveData(date, feeder.feederCode, rows)
+                    // ✅ FIXED: Pass both code and name
+                    saveData(date, feeder.feederCode, feeder.feederName, rows)
                 }
 
                 if (result.success) {
@@ -451,7 +493,13 @@ class FeederHourlyEntryFragment : Fragment() {
         }
     }
 
-    private suspend fun saveData(date: String, feederCode: String, rows: List<HourlyDataRow>): SaveResult = withContext(Dispatchers.IO) {
+    // ✅ FIXED: Accept nullable feederCode and feederName
+    private suspend fun saveData(
+        date: String,
+        feederCode: String?,
+        feederName: String,
+        rows: List<HourlyDataRow>
+    ): SaveResult = withContext(Dispatchers.IO) {
         val token = SessionManager.getToken(requireContext())
         val url = URL(SAVE_URL)
         val connection = url.openConnection() as HttpURLConnection
@@ -473,15 +521,19 @@ class FeederHourlyEntryFragment : Fragment() {
 
                 for (row in rows) {
                     val value = row.parameters[parameter] ?: ""
+
                     // ✅ Skip empty values AND "null" strings
                     if (value.isNotEmpty() && value != "null") {
                         hoursObject.put(row.hour, value)
                     }
                 }
 
+                // ✅ FIXED: Include both feeder_code and feeder_name
                 rowsArray.put(JSONObject().apply {
                     put("date", date)
-                    put("feeder_code", feederCode)
+                    // Only include feeder_code if not null
+                    feederCode?.let { put("feeder_code", it) }
+                    put("feeder_name", feederName)  // Always include name
                     put("parameter", parameter)
                     put("hours", hoursObject)
                 })
@@ -489,7 +541,7 @@ class FeederHourlyEntryFragment : Fragment() {
 
             val requestBody = JSONObject().put("rows", rowsArray)
 
-            Log.d(TAG, "📤 Request:\n${requestBody.toString(2)}")
+            Log.d(TAG, "📤 Save request:\n${requestBody.toString(2)}")
 
             OutputStreamWriter(connection.outputStream).use { writer ->
                 writer.write(requestBody.toString())
@@ -503,7 +555,7 @@ class FeederHourlyEntryFragment : Fragment() {
                     it.readText()
                 }
 
-                Log.d(TAG, "✅ Response: $response")
+                Log.d(TAG, "✅ Save response: $response")
 
                 val jsonResponse = JSONObject(response)
                 SaveResult(
@@ -511,7 +563,12 @@ class FeederHourlyEntryFragment : Fragment() {
                     jsonResponse.optString("message", "")
                 )
             } else {
-                SaveResult(false, "HTTP Error: $responseCode")
+                val errorMessage = connection.errorStream?.let { stream ->
+                    BufferedReader(InputStreamReader(stream)).use { it.readText() }
+                } ?: "HTTP Error: $responseCode"
+
+                Log.e(TAG, "❌ Save error: $errorMessage")
+                SaveResult(false, "Server error: $responseCode - $errorMessage")
             }
         } finally {
             connection.disconnect()
@@ -542,8 +599,9 @@ data class FeedersResponse(
     val feeders: List<FeederData>
 )
 
+// ✅ FIXED: Made feederCode nullable
 data class FeederData(
-    val feederCode: String,
+    val feederCode: String?,  // ✅ Now nullable
     val feederName: String,
     val feederCategory: String
 )
@@ -551,6 +609,16 @@ data class FeederData(
 data class HourlyDataRow(
     val hour: String,  // "00" to "23" - database format
     val parameters: MutableMap<String, String>
+)
+
+data class ExistingHourlyData(
+    val parameter: String,
+    val hours: Map<String, String>
+)
+
+data class SaveResult(
+    val success: Boolean,
+    val message: String
 )
 
 // ============================================
@@ -566,14 +634,17 @@ class HourlyDataAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     private val rows = mutableListOf<HourlyDataRow>()
     private var feederName: String = ""
-    private var feederCode: String = ""
+    private var feederCode: String? = null  // ✅ Made nullable
 
-    fun submitList(list: List<HourlyDataRow>, name: String, code: String) {
+    // ✅ FIXED: Accept nullable code
+    fun submitList(list: List<HourlyDataRow>, name: String, code: String?) {
         rows.clear()
         rows.addAll(list)
         feederName = name
         feederCode = code
         notifyDataSetChanged()
+
+        Log.d("HourlyDataAdapter", "✅ Submitted ${list.size} rows for $name (Code: ${code ?: "NONE"})")
     }
 
     fun getHourlyData(): List<HourlyDataRow> = rows
@@ -656,7 +727,7 @@ class HourlyDataAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
                 }
             }
 
-            // ✅ UPDATED: Different input types for different parameters
+            // ✅ Different input types for different parameters
             when (parameterName) {
                 "IB", "IR", "IY" -> {
                     // Integer only, no decimals, no negative
@@ -693,6 +764,75 @@ class HourlyDataAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
             editText.addTextChangedListener(watcher)
             editText.tag = watcher
+        }
+    }
+}
+
+// ============================================
+// INPUT FILTERS
+// ============================================
+
+class IntegerInputFilter(private val allowNegative: Boolean) : InputFilter {
+    override fun filter(
+        source: CharSequence?,
+        start: Int,
+        end: Int,
+        dest: Spanned?,
+        dstart: Int,
+        dend: Int
+    ): CharSequence? {
+        if (source == null || dest == null) return null
+
+        val newText = dest.toString().substring(0, dstart) +
+                source.toString().substring(start, end) +
+                dest.toString().substring(dend)
+
+        if (newText.isEmpty()) return null
+        if (newText == "-" && allowNegative) return null
+
+        return try {
+            newText.toInt()
+            null // Accept
+        } catch (e: NumberFormatException) {
+            "" // Reject
+        }
+    }
+}
+
+class DecimalInputFilter(
+    private val allowNegative: Boolean,
+    private val maxDecimalPlaces: Int = 8
+) : InputFilter {
+    override fun filter(
+        source: CharSequence?,
+        start: Int,
+        end: Int,
+        dest: Spanned?,
+        dstart: Int,
+        dend: Int
+    ): CharSequence? {
+        if (source == null || dest == null) return null
+
+        val newText = dest.toString().substring(0, dstart) +
+                source.toString().substring(start, end) +
+                dest.toString().substring(dend)
+
+        if (newText.isEmpty()) return null
+        if (newText == "-" && allowNegative) return null
+        if (newText == ".") return null
+
+        // Check decimal places
+        if (newText.contains(".")) {
+            val parts = newText.split(".")
+            if (parts.size > 2) return ""
+            if (parts.size == 2 && parts[1].length > maxDecimalPlaces) return ""
+        }
+
+        return try {
+            newText.toDouble()
+            null // Accept
+        } catch (e: NumberFormatException) {
+            "" // Reject
         }
     }
 }
