@@ -3,17 +3,20 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
-
 android {
     namespace = "com.apc.kptcl"
-    compileSdk = 36  // ✅ FIXED
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.apc.kptcl"
-        minSdk = 26  // ✅ FIXED: Changed from 24 to 26 (required for Apache POI)
+        minSdk = 26
         targetSdk = 36
         versionCode = 1
-        versionName = "1.0"
+
+        // ✅ SINGLE SOURCE OF TRUTH for app version
+        // Yahan sirf yahi ek jagah change karo - "1.4" → "1.5" etc.
+        // BuildConfig.VERSION_NAME se poore app mein automatically milega
+        versionName = "1.4 beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -34,12 +37,13 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
-    buildFeatures{
+    buildFeatures {
         viewBinding = true
         dataBinding = true
+        // ✅ BuildConfig enable karo - VERSION_NAME access ke liye zaroori
+        buildConfig = true
     }
 
-    // ✅ ADD THIS: Packaging options to exclude duplicate files
     packagingOptions {
         resources {
             excludes += setOf(

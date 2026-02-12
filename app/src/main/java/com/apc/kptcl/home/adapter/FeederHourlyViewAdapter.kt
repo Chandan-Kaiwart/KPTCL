@@ -29,19 +29,28 @@ class FeederHourlyViewAdapter : RecyclerView.Adapter<FeederHourlyViewAdapter.Vie
     }
 
     /**
-     * Submit new list of data - NO FILTERING, SHOW ALL
+     * Submit new list of data - SORTED in required order: IR, IY, IB, MW, MVAR
      */
     fun submitList(list: List<FeederHourlyData>) {
         android.util.Log.d("FeederAdapter", "📊 submitList called with ${list.size} items")
 
-        val diffCallback = FeederHourlyDiffCallback(dataList, list)
+        // ✅ Define the correct parameter order
+        val parameterOrder = listOf("IR", "IY", "IB", "MW", "MVAR")
+
+        // ✅ Sort the list according to the defined order
+        val sortedList = list.sortedBy { data ->
+            val index = parameterOrder.indexOf(data.parameter.uppercase())
+            if (index == -1) Int.MAX_VALUE else index  // Unknown parameters go to end
+        }
+
+        val diffCallback = FeederHourlyDiffCallback(dataList, sortedList)
         val diffResult = DiffUtil.calculateDiff(diffCallback)
 
         dataList.clear()
-        dataList.addAll(list)
+        dataList.addAll(sortedList)
 
         android.util.Log.d("FeederAdapter", "📊 Adapter now has ${dataList.size} items")
-        android.util.Log.d("FeederAdapter", "📊 Parameters: ${dataList.map { it.parameter }.distinct()}")
+        android.util.Log.d("FeederAdapter", "📊 Parameters (sorted): ${dataList.map { it.parameter }.distinct()}")
 
         diffResult.dispatchUpdatesTo(this)
     }
@@ -188,11 +197,11 @@ class FeederHourlyViewAdapter : RecyclerView.Adapter<FeederHourlyViewAdapter.Vie
          */
         private fun applyParameterColor(textView: android.widget.TextView, parameter: String) {
             val color = when (parameter.uppercase()) {
+                "IR" -> Color.parseColor("#FF9800") // Orange
+                "IY" -> Color.parseColor("#F44336") // Red
+                "IB" -> Color.parseColor("#9C27B0") // Purple ← ADDED
                 "MW" -> Color.parseColor("#4CAF50") // Green
                 "MVAR" -> Color.parseColor("#2196F3") // Blue
-                "IR" -> Color.parseColor("#FF9800") // Orange
-                "IB" -> Color.parseColor("#9C27B0") // Purple
-                "IY" -> Color.parseColor("#F44336") // Red
                 else -> Color.parseColor("#757575") // Gray
             }
             textView.setTextColor(color)

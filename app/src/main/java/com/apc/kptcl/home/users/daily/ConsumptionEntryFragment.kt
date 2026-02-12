@@ -35,6 +35,7 @@ import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
 import androidx.navigation.fragment.findNavController
+import com.apc.kptcl.utils.ApiErrorHandler
 
 class ConsumptionEntryFragment : Fragment() {
 
@@ -57,9 +58,9 @@ class ConsumptionEntryFragment : Fragment() {
 
     companion object {
         private const val TAG = "ConsumptionEntry"
-        private const val FEEDER_LIST_URL = "http://62.72.59.119:9000/api/feeder/list"
-        private const val CONSUMPTION_URL = "http://62.72.59.119:9000/api/feeder/consumption"
-        private const val SAVE_URL = "http://62.72.59.119:9000/api/feeder/consumption/save"
+        private const val FEEDER_LIST_URL = "http://62.72.59.119:8000/api/feeder/list"
+        private const val CONSUMPTION_URL = "http://62.72.59.119:8000/api/feeder/consumption"
+        private const val SAVE_URL = "http://62.72.59.119:8000/api/feeder/consumption/save"
         private const val TIMEOUT = 15000
     }
 
@@ -225,11 +226,7 @@ class ConsumptionEntryFragment : Fragment() {
                 e.printStackTrace()
 
                 withContext(Dispatchers.Main) {
-                    Snackbar.make(
-                        binding.root,
-                        "Error: ${e.message}",
-                        Snackbar.LENGTH_LONG
-                    ).show()
+                    Snackbar.make(binding.root, ApiErrorHandler.handle(e), Snackbar.LENGTH_LONG).show()
                 }
             } finally {
                 withContext(Dispatchers.Main) {
@@ -484,22 +481,14 @@ class ConsumptionEntryFragment : Fragment() {
             }
 
             val responseCode = connection.responseCode
-            Log.d(TAG, "📡 Response code: $responseCode")
 
             if (responseCode == HttpURLConnection.HTTP_OK) {
-                val response = BufferedReader(InputStreamReader(connection.inputStream)).use {
-                    it.readText()
-                }
-
-                Log.d(TAG, "📄 Response: ${response.take(200)}...")
+                val response = BufferedReader(InputStreamReader(connection.inputStream)).use { it.readText() }
                 parseFeedersResponse(response)
             } else {
-                val errorMessage = connection.errorStream?.let { stream ->
-                    BufferedReader(InputStreamReader(stream)).use { it.readText() }
-                } ?: "HTTP Error: $responseCode"
-
-                Log.e(TAG, "❌ API Error: $errorMessage")
-                throw Exception("Failed to fetch feeders: $responseCode")
+                // ✅ FIXED: Parse server error message instead of throwing raw code
+                val errorMsg = ApiErrorHandler.fromErrorStream(connection.errorStream, responseCode)
+                throw Exception(errorMsg)
             }
         } finally {
             connection.disconnect()
@@ -647,7 +636,7 @@ class ConsumptionEntryFragment : Fragment() {
 
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Submit error", e)
-                showError("Error: ${e.message}")
+                showError(ApiErrorHandler.handle(e))
             } finally {
                 showLoading(false)
             }
@@ -677,15 +666,12 @@ class ConsumptionEntryFragment : Fragment() {
                 doInput = true
             }
 
-            // Build request body
             val rowsArray = JSONArray()
-
             dataList.forEach { item ->
                 val rowObject = JSONObject().apply {
                     put("date", date)
                     put("station_name", stationName)
                     put("feeder_name", item.feederName)
-                    // Only include feeder_code if it's not null
                     item.feederCode?.let { put("feeder_code", it) }
                     put("feeder_category", item.feederCategory ?: "")
                     put("remark", item.remark ?: "")
@@ -696,40 +682,26 @@ class ConsumptionEntryFragment : Fragment() {
                 rowsArray.put(rowObject)
             }
 
-            val requestBody = JSONObject().apply {
-                put("rows", rowsArray)
-            }
+            val requestBody = JSONObject().apply { put("rows", rowsArray) }
 
-            Log.d(TAG, "📤 Request:\n${requestBody.toString(2)}")
-
-            // Send request
             OutputStreamWriter(connection.outputStream).use { writer ->
                 writer.write(requestBody.toString())
                 writer.flush()
             }
 
             val responseCode = connection.responseCode
-            Log.d(TAG, "📡 Response code: $responseCode")
 
             if (responseCode == HttpURLConnection.HTTP_OK) {
-                val response = BufferedReader(InputStreamReader(connection.inputStream)).use {
-                    it.readText()
-                }
-
-                Log.d(TAG, "✅ Response: $response")
-
+                val response = BufferedReader(InputStreamReader(connection.inputStream)).use { it.readText() }
                 val jsonResponse = JSONObject(response)
-                val success = jsonResponse.optBoolean("success", false)
-                val message = jsonResponse.optString("message", "")
-
-                SaveResult(success, message)
+                SaveResult(
+                    jsonResponse.optBoolean("success", false),
+                    jsonResponse.optString("message", "")
+                )
             } else {
-                val errorMessage = connection.errorStream?.let { stream ->
-                    BufferedReader(InputStreamReader(stream)).use { it.readText() }
-                } ?: "HTTP Error: $responseCode"
-
-                Log.e(TAG, "❌ Error: $errorMessage")
-                SaveResult(false, errorMessage)
+                // ✅ FIXED: Show real server error message, not raw JSON or IP
+                val errorMsg = ApiErrorHandler.fromErrorStream(connection.errorStream, responseCode)
+                SaveResult(false, errorMsg)
             }
         } finally {
             connection.disconnect()

@@ -193,6 +193,15 @@ class MainActivity : AppCompatActivity() {
                         })
 
                 }
+                R.id.createStationTicket -> {
+                    navController.navigate(R.id.feederConfirmation, null,
+                        navOptions {
+                            popUpTo(R.id.homeFragment) {
+                                inclusive = false
+                            }
+                        })
+
+                }
                 R.id.viewTickets -> {
                     navController.navigate(R.id.viewTicketsFragment, null,
                         navOptions {

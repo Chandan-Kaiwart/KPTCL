@@ -37,7 +37,7 @@ class FeederConfirmationFragment : Fragment() {
 
     companion object {
         private const val TAG = "FeederConfirmation"
-        private const val FEEDER_LIST_URL = "http://62.72.59.119:9000/api/feeder/list"
+        private const val FEEDER_LIST_URL = "http://62.72.59.119:8000/api/feeder/list"
         private const val TIMEOUT = 15000
     }
 
@@ -132,7 +132,7 @@ class FeederConfirmationFragment : Fragment() {
                         val feeders = response.data.map { item ->
                             FeederData(
                                 name = item.FEEDER_NAME,
-                                code = item.FEEDER_CODE,
+                                code = item.FEEDER_CODE, // ✅ Nullable
                                 category = item.FEEDER_CATEGORY,
                                 confirmed = false
                             )
@@ -274,11 +274,20 @@ class FeederConfirmationAdapter(
     private val feeders = mutableListOf<FeederData>()
     private val confirmations = mutableMapOf<String, Boolean>()
 
+    /**
+     * ✅ Get unique key for feeder - Prefer code, fallback to name
+     * Same logic as FeederHourlyEntryFragment
+     */
+    private fun getFeederKey(feeder: FeederData): String {
+        return feeder.code ?: feeder.name
+    }
+
     fun submitList(list: List<FeederData>) {
         feeders.clear()
         feeders.addAll(list)
         // Initialize all as not confirmed (No selected by default)
-        list.forEach { confirmations[it.code] = false }
+        // ✅ Use code if available, otherwise name
+        list.forEach { confirmations[getFeederKey(it)] = false }
         notifyDataSetChanged()
     }
 
@@ -306,11 +315,14 @@ class FeederConfirmationAdapter(
         fun bind(feeder: FeederData) {
             binding.apply {
                 tvFeederName.text = feeder.name
-                tvFeederCode.text = feeder.code
+                tvFeederCode.text = feeder.code ?: "NO CODE" // ✅ Handle null display
                 tvFeederCategory.text = feeder.category
 
+                // ✅ Get unique key - prefer code, fallback to name
+                val feederKey = getFeederKey(feeder)
+
                 // Set initial state
-                val isConfirmed = confirmations[feeder.code] ?: false
+                val isConfirmed = confirmations[feederKey] ?: false
                 if (isConfirmed) {
                     rgConfirmation.check(R.id.rbYes)
                     btnRaiseTicket.visibility = View.GONE
@@ -323,12 +335,12 @@ class FeederConfirmationAdapter(
                 rgConfirmation.setOnCheckedChangeListener { _, checkedId ->
                     when (checkedId) {
                         R.id.rbYes -> {
-                            confirmations[feeder.code] = true
+                            confirmations[feederKey] = true // ✅ Use code if available
                             feeder.confirmed = true
                             btnRaiseTicket.visibility = View.GONE
                         }
                         R.id.rbNo -> {
-                            confirmations[feeder.code] = false
+                            confirmations[feederKey] = false // ✅ Use code if available
                             feeder.confirmed = false
                             btnRaiseTicket.visibility = View.VISIBLE
                         }

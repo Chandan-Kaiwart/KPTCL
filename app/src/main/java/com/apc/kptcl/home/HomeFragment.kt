@@ -49,9 +49,9 @@ class HomeFragment : Fragment() {
 
     companion object {
         private const val TAG = "HomeFragment"
-        private const val VIEW_TICKETS_API = "http://62.72.59.119:9000/api/feeder/ticket/view/all"
-        private const val APPROVE_API = "http://62.72.59.119:9000/api/dcc/ticket/approve"
-        private const val REJECT_API = "http://62.72.59.119:9000/api/dcc/ticket/reject"
+        private const val VIEW_TICKETS_API = "http://62.72.59.119:8000/api/feeder/ticket/view/all"
+        private const val APPROVE_API = "http://62.72.59.119:8000/api/dcc/ticket/approve"
+        private const val REJECT_API = "http://62.72.59.119:8000/api/dcc/ticket/reject"
         private const val TIMEOUT = 15000
     }
 
@@ -298,7 +298,9 @@ class HomeFragment : Fragment() {
     }
 
     private fun showStationUserFeatures() {
-        binding.confirmationBtn.visibility = View.VISIBLE
+        binding.confirmationBtn.visibility = View.GONE
+
+
     }
 
     private fun hideStationUserFeatures() {

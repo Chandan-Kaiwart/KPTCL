@@ -11,14 +11,14 @@ data class FeederListResponse(
 
 data class FeederItem(
     val FEEDER_NAME: String,
-    val FEEDER_CODE: String,
+    val FEEDER_CODE: String?,
     val FEEDER_CATEGORY: String,
     val STATION_NAME: String
 )
 
 data class FeederData(
     val name: String,
-    val code: String,
+    val code: String?,
     val category: String,
     var confirmed: Boolean
 )

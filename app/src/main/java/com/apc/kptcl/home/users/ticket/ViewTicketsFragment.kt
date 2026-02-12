@@ -20,6 +20,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import com.apc.kptcl.home.users.ticket.dataclass.TicketApiService
 import com.apc.kptcl.home.users.ticket.dataclass.TicketsAdapter
+import com.apc.kptcl.utils.ApiErrorHandler
 
 
 class ViewTicketsFragment : Fragment() {
@@ -33,7 +34,7 @@ class ViewTicketsFragment : Fragment() {
 
     companion object {
         private const val TAG = "ViewTicketsFragment"
-        private const val TICKET_API_BASE_URL = "http://62.72.59.119:9000/"
+        private const val TICKET_API_BASE_URL = "http://62.72.59.119:8000/"
     }
 
     private val retrofit by lazy {
@@ -227,13 +228,12 @@ class ViewTicketsFragment : Fragment() {
                         401 -> {
                             showError("Session expired. Please login again.")
                         }
-                        else -> showError("Error: ${response.code()} - ${response.message()}")
+                        else -> showError(ApiErrorHandler.parseServerError(response.errorBody()?.string(), response.code()))
                     }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Network error", e)
-                showError("Network error: ${e.message}")
-                e.printStackTrace()
+                showError(ApiErrorHandler.handle(e))
             }
         }
     }

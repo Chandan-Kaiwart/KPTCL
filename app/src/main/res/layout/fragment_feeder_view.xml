@@ -39,7 +39,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:gravity="center"
-                    android:text="(View Hourly Parameter: IB, IR, IY, MW, MVAR, ENERGY)"
+                    android:text="(View Hourly Parameter: IR, IY, IB, MW, MVAR)"
                     android:textColor="@android:color/white"
                     android:textSize="11sp" />
             </LinearLayout>

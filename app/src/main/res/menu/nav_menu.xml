@@ -54,13 +54,19 @@
     </item>
 
     <!-- Tickets Section Header -->
+    <!-- Alternative: Flat structure -->
     <item android:title="TICKETS"
         app:iconTint="@color/black">
         <menu>
             <item
                 android:id="@+id/createTicket"
                 android:icon="@drawable/ic_add"
-                android:title="Create Ticket"
+                android:title="Create General Ticket"
+                app:iconTint="@color/icon_tint" />
+            <item
+                android:id="@+id/createStationTicket"
+                android:icon="@drawable/ic_stationadd"
+                android:title="Create Station Ticket"
                 app:iconTint="@color/icon_tint" />
             <item
                 android:id="@+id/viewTickets"

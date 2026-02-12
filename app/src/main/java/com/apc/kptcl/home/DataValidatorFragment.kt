@@ -44,7 +44,7 @@ class DataValidatorFragment : Fragment() {
     // ✅ API setup
     private val retrofit by lazy {
         Retrofit.Builder()
-            .baseUrl("http://62.72.59.119:9000/")
+            .baseUrl("http://62.72.59.119:8000/")
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }

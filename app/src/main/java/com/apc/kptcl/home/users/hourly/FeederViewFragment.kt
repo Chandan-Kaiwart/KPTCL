@@ -13,9 +13,11 @@ import androidx.lifecycle.lifecycleScope
 import com.apc.kptcl.R
 import com.apc.kptcl.databinding.FragmentFeederViewBinding
 import com.apc.kptcl.home.adapter.*
+import com.apc.kptcl.utils.ApiErrorHandler
 import com.apc.kptcl.utils.SessionManager
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -151,12 +153,20 @@ class FeederViewFragment : Fragment() {
                     val error = result.exceptionOrNull()?.message ?: "Unknown error"
                     Log.e(TAG, "❌ Error loading feeders: $error")
                     binding.btnSearch.isEnabled = false
-                    Snackbar.make(binding.root, "Error loading feeders: $error", Snackbar.LENGTH_LONG).show()
+                    androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                        .setTitle("❌ Error Loading Feeders")
+                        .setMessage(error ?: "Failed to load feeders. Please try again.")
+                        .setPositiveButton("OK", null)
+                        .show()
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Exception loading feeders", e)
                 binding.btnSearch.isEnabled = false
-                Snackbar.make(binding.root, "Error: ${e.message}", Snackbar.LENGTH_LONG).show()
+                androidx.appcompat.app.AlertDialog.Builder(requireContext())
+    .setTitle("❌ Error")
+                    .setMessage(ApiErrorHandler.handle(e))
+    .setPositiveButton("OK", null)
+    .show()
             }
         }
     }
@@ -277,12 +287,20 @@ class FeederViewFragment : Fragment() {
                 } else {
                     val error = result.exceptionOrNull()?.message ?: "Unknown error"
                     Log.e(TAG, "❌ Error fetching data: $error")
-                    Snackbar.make(binding.root, "Error: $error", Snackbar.LENGTH_LONG).show()
+                    androidx.appcompat.app.AlertDialog.Builder(requireContext())
+    .setTitle("❌ Error")
+                        .setMessage(error ?: "Failed to fetch data. Please try again.")
+    .setPositiveButton("OK", null)
+    .show()
                 }
 
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Exception fetching data", e)
-                Snackbar.make(binding.root, "Error: ${e.message}", Snackbar.LENGTH_LONG).show()
+                androidx.appcompat.app.AlertDialog.Builder(requireContext())
+    .setTitle("❌ Error")
+    .setMessage(ApiErrorHandler.handle(e))
+    .setPositiveButton("OK", null)
+    .show()
             } finally {
                 binding.btnSearch.isEnabled = true
                 binding.btnSearch.text = "SEARCH"
@@ -294,5 +312,52 @@ class FeederViewFragment : Fragment() {
         super.onDestroyView()
         _binding = null
         Log.d(TAG, "Fragment destroyed")
+    }
+    /**
+     * ✅ Parse error response from backend API
+     */
+    private fun parseErrorResponse(errorBody: String?): String {
+        return try {
+            if (errorBody.isNullOrEmpty()) return "Unknown error occurred"
+
+            val jsonObject = JSONObject(errorBody)
+
+            // Try to get message field
+            val message = jsonObject.optString("message", "")
+            if (message.isNotEmpty()) {
+                var fullMessage = message
+
+                // Check for validation errors array
+                val errorsArray = jsonObject.optJSONArray("errors")
+                if (errorsArray != null && errorsArray.length() > 0) {
+                    fullMessage += "\n\nValidation Errors:\n"
+                    for (i in 0 until errorsArray.length()) {
+                        val error = errorsArray.getJSONObject(i)
+                        val feeder = error.optString("feeder", "Unknown")
+                        val param = error.optString("parameter", "")
+                        val hour = error.optString("hour", "")
+                        val errorMsg = error.optString("error", "")
+                        fullMessage += "• $feeder [$param] Hour $hour: $errorMsg\n"
+                    }
+                }
+
+                // Check for details
+                val details = jsonObject.optJSONObject("details")
+                if (details != null) {
+                    val rule = details.optString("rule", "")
+                    if (rule.isNotEmpty()) {
+                        fullMessage += "\nRule: $rule"
+                    }
+                }
+
+                return fullMessage
+            }
+
+            // Fallback to full error body
+            errorBody
+
+        } catch (e: Exception) {
+            errorBody ?: "Error: ${e.message}"
+        }
     }
 }

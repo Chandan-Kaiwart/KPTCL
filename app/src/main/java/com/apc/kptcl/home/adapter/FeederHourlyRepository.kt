@@ -20,9 +20,9 @@ class FeederHourlyRepository {
 
     companion object {
         private const val TAG = "FeederHourlyRepository"
-        private const val BASE_URL = "http://62.72.59.119:9000/api/feeder"
+        private const val BASE_URL = "http://62.72.59.119:8000/api/feeder"
         private const val HOURLY_ENDPOINT = "$BASE_URL/hourly"
-        private const val FEEDER_LIST_URL = "http://62.72.59.119:9000/api/feeder/list"
+        private const val FEEDER_LIST_URL = "http://62.72.59.119:8000/api/feeder/list"
         private const val TIMEOUT = 15000
     }
 
@@ -399,4 +399,51 @@ fun List<FeederHourlyData>.getAllHourValues(hour: String): Map<String, Double> {
             data.parameter to value
         }
     }.toMap()
+}
+/**
+ * ✅ Parse error response from backend API
+ */
+private fun parseErrorResponse(errorBody: String?): String {
+    return try {
+        if (errorBody.isNullOrEmpty()) return "Unknown error occurred"
+
+        val jsonObject = JSONObject(errorBody)
+
+        // Try to get message field
+        val message = jsonObject.optString("message", "")
+        if (message.isNotEmpty()) {
+            var fullMessage = message
+
+            // Check for validation errors array
+            val errorsArray = jsonObject.optJSONArray("errors")
+            if (errorsArray != null && errorsArray.length() > 0) {
+                fullMessage += "\n\nValidation Errors:\n"
+                for (i in 0 until errorsArray.length()) {
+                    val error = errorsArray.getJSONObject(i)
+                    val feeder = error.optString("feeder", "Unknown")
+                    val param = error.optString("parameter", "")
+                    val hour = error.optString("hour", "")
+                    val errorMsg = error.optString("error", "")
+                    fullMessage += "• $feeder [$param] Hour $hour: $errorMsg\n"
+                }
+            }
+
+            // Check for details
+            val details = jsonObject.optJSONObject("details")
+            if (details != null) {
+                val rule = details.optString("rule", "")
+                if (rule.isNotEmpty()) {
+                    fullMessage += "\nRule: $rule"
+                }
+            }
+
+            return fullMessage
+        }
+
+        // Fallback to full error body
+        errorBody
+
+    } catch (e: Exception) {
+        errorBody ?: "Error: ${e.message}"
+    }
 }
