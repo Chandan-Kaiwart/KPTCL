@@ -16,7 +16,7 @@ android {
         // ✅ SINGLE SOURCE OF TRUTH for app version
         // Yahan sirf yahi ek jagah change karo - "1.4" → "1.5" etc.
         // BuildConfig.VERSION_NAME se poore app mein automatically milega
-        versionName = "1.4 beta"
+        versionName = "1.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

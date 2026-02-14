@@ -124,7 +124,11 @@
         android:name="com.apc.kptcl.home.users.daily.ConsumptionEntryFragment"
         android:label="Daily Consumption Entry"
         tools:layout="@layout/fragment_consumption_entry"
-        />
+        >
+        <action
+            android:id="@+id/action_consumptionEntryFragment_to_dailyParameterEntryFragment"
+            app:destination="@id/dailyParameterEntryFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/viewTicketsFragment"
@@ -147,6 +151,18 @@
             android:id="@+id/action_CreateTicketFragment_to_viewTicketsFragment"
             app:destination="@id/viewTicketsFragment" />
     </fragment>
+    <fragment
+        android:id="@+id/generalTicketFragment"
+        android:name="com.apc.kptcl.home.users.ticket.GeneralTicketFragment"
+        android:label="Raise Ticket"
+        tools:layout="@layout/fragment_create_ticket"
+       />
+    <fragment
+        android:id="@+id/stationTicketFragment"
+        android:name="com.apc.kptcl.home.users.ticket.StationTicketFragment"
+        android:label="Raise Ticket"
+        tools:layout="@layout/fragment_create_ticket"
+       />
 
     <fragment
         android:id="@+id/elogEntryFragment"

@@ -58,9 +58,9 @@ class FeederHourlyEntryFragment : Fragment() {
 
     companion object {
         private const val TAG = "HourlyEntry"
-        private const val FEEDER_LIST_URL = "http://62.72.59.119:8000/api/feeder/list"
-        private const val FETCH_URL = "http://62.72.59.119:8000/api/feeder/hourly"
-        private const val SAVE_URL = "http://62.72.59.119:8000/api/feeder/hourly-entry/save"
+        private const val FEEDER_LIST_URL = "http://62.72.59.119:8008/api/feeder/list"
+        private const val FETCH_URL = "http://62.72.59.119:8008/api/feeder/hourly"
+        private const val SAVE_URL = "http://62.72.59.119:8008/api/feeder/hourly-entry/save"
         private const val TIMEOUT = 15000
     }
 

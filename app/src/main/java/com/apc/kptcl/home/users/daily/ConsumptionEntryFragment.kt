@@ -58,9 +58,9 @@ class ConsumptionEntryFragment : Fragment() {
 
     companion object {
         private const val TAG = "ConsumptionEntry"
-        private const val FEEDER_LIST_URL = "http://62.72.59.119:8000/api/feeder/list"
-        private const val CONSUMPTION_URL = "http://62.72.59.119:8000/api/feeder/consumption"
-        private const val SAVE_URL = "http://62.72.59.119:8000/api/feeder/consumption/save"
+        private const val FEEDER_LIST_URL = "http://62.72.59.119:8008/api/feeder/list"
+        private const val CONSUMPTION_URL = "http://62.72.59.119:8008/api/feeder/consumption"
+        private const val SAVE_URL = "http://62.72.59.119:8008/api/feeder/consumption/save"
         private const val TIMEOUT = 15000
     }
 
@@ -98,104 +98,284 @@ class ConsumptionEntryFragment : Fragment() {
     private fun setupDatePicker() {
         binding.etDate.setText(dateFormat.format(calendar.time))
         binding.etDate.setOnClickListener {
-            showDatePicker()
+            DatePickerDialog(
+                requireContext(),
+                { _, year, month, day ->
+                    calendar.set(year, month, day)
+                    binding.etDate.setText(dateFormat.format(calendar.time))
+                    updateTableTitle()
+
+                    // Reload data for new date if feeder is selected
+                    val selectedPosition = binding.spinnerFeeder.selectedItemPosition
+                    if (selectedPosition >= 0 && selectedPosition < allFeeders.size) {
+                        fetchExistingDataAndDisplay(allFeeders[selectedPosition])
+                    }
+                },
+                calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH),
+                calendar.get(Calendar.DAY_OF_MONTH)
+            ).show()
         }
-    }
-
-    private fun showDatePicker() {
-        val datePickerDialog = DatePickerDialog(
-            requireContext(),
-            { _, year, month, dayOfMonth ->
-                calendar.set(year, month, dayOfMonth)
-                binding.etDate.setText(dateFormat.format(calendar.time))
-                updateTableTitle()
-            },
-            calendar.get(Calendar.YEAR),
-            calendar.get(Calendar.MONTH),
-            calendar.get(Calendar.DAY_OF_MONTH)
-        )
-
-        // ✅ FUTURE DATES DISABLE - Present date se aage select nahi hoga
-        datePickerDialog.datePicker.maxDate = System.currentTimeMillis()
-
-        datePickerDialog.show()
-    }
-
-    private fun updateTableTitle() {
-        val formattedDate = dateFormat.format(calendar.time)
-        // ✅ Show station name in title only if it's available
-        val titleText = if (stationName.isNotEmpty()) {
-            "FEEDER CONSUMPTION DATA ENTRY FOR $formattedDate - $stationName"
-        } else {
-            "FEEDER CONSUMPTION DATA ENTRY FOR $formattedDate"
-        }
-        binding.tvTableTitle.text = titleText
     }
 
     private fun setupRecyclerView() {
-        adapter = EntryConsumptionDataAdapter { data ->
-            // Callback when data changes
-            selectedFeederData = data
+        adapter = EntryConsumptionDataAdapter { updatedData ->
+            selectedFeederData = updatedData
         }
-        binding.rvConsumptionData.apply {
-            layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
-            adapter = this@ConsumptionEntryFragment.adapter
-        }
-        Log.d(TAG, "✅ RecyclerView setup complete")
+        binding.rvConsumptionData.layoutManager = LinearLayoutManager(
+            requireContext(),
+            LinearLayoutManager.HORIZONTAL,
+            false
+        )
+        binding.rvConsumptionData.adapter = adapter
     }
 
     private fun setupButtons() {
-        binding.btnSubmit.setOnClickListener {
-            validateAndSubmitData()
+        binding.btnSubmit.setOnClickListener { submitData() }
+        binding.btnEdit.setOnClickListener { refreshData() }
+        binding.btnView.setOnClickListener { navigateToView() }
+    }
+
+    private fun updateTableTitle() {
+        val dateStr = dateFormat.format(calendar.time)
+        val title = if (stationName.isNotEmpty()) {
+            "FEEDER CONSUMPTION DATA ENTRY FOR $dateStr ($stationName)"
+        } else {
+            "FEEDER CONSUMPTION DATA ENTRY FOR $dateStr"
+        }
+        binding.tvTableTitle.text = title
+    }
+
+    // ============================================================================
+    // ✅ VALIDATION METHODS - NEW ADDITION
+    // ============================================================================
+
+    /**
+     * ✅ CRITICAL: Validate data before submission
+     * BLOCKS submission if:
+     * 1. Individual field (3PH or 1PH) > 24:00
+     * 2. Total (3PH + 1PH) > 24:00
+     */
+    private fun validateBeforeSubmit(data: EntryConsumptionData): String? {
+        val supply3ph = data.supply3ph?.trim() ?: ""
+        val supply1ph = data.supply1ph?.trim() ?: ""
+
+        // ✅ Skip ONLY if both are truly empty
+        if (supply3ph.isEmpty() && supply1ph.isEmpty()) {
+            return null // No error - both empty is allowed
         }
 
-        binding.btnEdit.setOnClickListener {
-            // Refresh feeder list
-            fetchFeederList()
-            Toast.makeText(context, "Refreshing feeder list...", Toast.LENGTH_SHORT).show()
+        // ✅ Validate 3PH format and value if not empty
+        if (supply3ph.isNotEmpty()) {
+            if (!isValidTimeFormat(supply3ph)) {
+                return """
+                ❌ Invalid 3PH format!
+                
+                Expected: HH:MM (00:00 to 24:00)
+                Your input: $supply3ph
+                
+                Examples:
+                • 18:30 ✅
+                • 24:00 ✅
+                • 25:00 ❌
+                • 18:60 ❌
+            """.trimIndent()
+            }
+
+            // ✅ CRITICAL: Block if 3PH alone exceeds 24:00
+            val minutes3ph = parseTimeToMinutes(supply3ph)
+            if (minutes3ph > 1440) {
+                return """
+                ❌ 3PH Supply exceeds 24:00!
+                
+                3PH Supply: $supply3ph
+                Maximum allowed: 24:00
+                
+                ⚠️ SUBMISSION BLOCKED!
+                Please correct the value.
+            """.trimIndent()
+            }
         }
 
-        binding.btnView.setOnClickListener {
-            showDataSummary()
+        // ✅ Validate 1PH format and value if not empty
+        if (supply1ph.isNotEmpty()) {
+            if (!isValidTimeFormat(supply1ph)) {
+                return """
+                ❌ Invalid 1PH format!
+                
+                Expected: HH:MM (00:00 to 24:00)
+                Your input: $supply1ph
+                
+                Examples:
+                • 05:30 ✅
+                • 24:00 ✅
+                • 30:00 ❌
+                • 05:99 ❌
+            """.trimIndent()
+            }
+
+            // ✅ CRITICAL: Block if 1PH alone exceeds 24:00
+            val minutes1ph = parseTimeToMinutes(supply1ph)
+            if (minutes1ph > 1440) {
+                return """
+                ❌ 1PH Supply exceeds 24:00!
+                
+                1PH Supply: $supply1ph
+                Maximum allowed: 24:00
+                
+                ⚠️ SUBMISSION BLOCKED!
+                Please correct the value.
+            """.trimIndent()
+            }
         }
+
+        // ✅ Validate total (3PH + 1PH) <= 24:00
+        val minutes3ph = if (supply3ph.isNotEmpty() && isValidTimeFormat(supply3ph)) {
+            parseTimeToMinutes(supply3ph)
+        } else {
+            0
+        }
+
+        val minutes1ph = if (supply1ph.isNotEmpty() && isValidTimeFormat(supply1ph)) {
+            parseTimeToMinutes(supply1ph)
+        } else {
+            0
+        }
+
+        val totalMinutes = minutes3ph + minutes1ph
+
+        if (totalMinutes > 1440) {
+            val totalTime = convertMinutesToTime(totalMinutes)
+            return """
+            ❌ Total Supply exceeds 24:00!
+            
+            3PH Supply: $supply3ph
+            1PH Supply: $supply1ph
+            Total: $totalTime
+            
+            Maximum: 24:00
+            
+            ⚠️ SUBMISSION BLOCKED!
+            Please adjust the values.
+        """.trimIndent()
+        }
+
+        return null // ✅ All validations passed
+    }
+
+
+    /**
+     * ✅ Validate HH:MM format - allows 00:00 to 24:00
+     */
+    private fun isValidTimeFormat(time: String): Boolean {
+        if (time.isBlank()) return true
+
+        // ✅ CRITICAL: Use [0-5][0-9] to allow only 00-59 for minutes
+        if (!time.matches(Regex("^\\d{1,2}:[0-5][0-9]$"))) return false
+
+        val parts = time.split(":")
+        val hours = parts[0].toIntOrNull() ?: return false
+        val minutes = parts[1].toIntOrNull() ?: return false
+
+        // ✅ Allow 00:00 to 24:00 (24:00 is valid, but 24:01+ is not)
+        return hours in 0..24 && minutes in 0..59 && !(hours == 24 && minutes > 0)
     }
 
     /**
-     * Fetch feeder list from API and populate spinner
-     * Also extracts station name from API response
+     * ✅ Convert time to minutes
      */
+    private fun parseTimeToMinutes(time: String): Int {
+        if (time.isBlank()) return 0
+
+        val parts = time.split(":")
+        val hours = parts[0].toIntOrNull() ?: 0
+        val minutes = parts[1].toIntOrNull() ?: 0
+
+        return (hours * 60) + minutes
+    }
+
+    /**
+     * ✅ Convert minutes back to HH:MM
+     */
+    private fun convertMinutesToTime(totalMinutes: Int): String {
+        val hours = totalMinutes / 60
+        val minutes = totalMinutes % 60
+        return String.format("%02d:%02d", hours, minutes)
+    }
+
+    /**
+     * ✅ Helper: Check karta hai ki time valid format mein hai AND 24:00 ke andar hai
+     * Submit ke time error message ke liye use hota hai
+     */
+    private fun isValidTimeOrInRange(time: String): Boolean {
+        if (time.isBlank()) return true
+        if (!isValidTimeFormat(time)) return false
+        return parseTimeToMinutes(time) <= 1440
+    }
+
+    // ============================================================================
+    // END OF VALIDATION METHODS
+    // ============================================================================
+
     private fun fetchFeederList() {
-        val token = SessionManager.getToken(requireContext())
-
-        if (token.isEmpty()) {
-            Snackbar.make(binding.root, "Authentication token missing", Snackbar.LENGTH_LONG).show()
-            Log.e(TAG, "❌ TOKEN IS EMPTY")
-            return
-        }
-
-        Log.d(TAG, "═══════════════════════════════════════")
-        Log.d(TAG, "🔄 FETCH FEEDER LIST STARTED")
-        Log.d(TAG, "═══════════════════════════════════════")
-
-        showLoading(true, "Loading feeders...")
-
         lifecycleScope.launch {
-            try {
-                Log.d(TAG, "📡 Calling API...")
+            showLoading(true, "Loading feeders...")
 
-                val result = withContext(Dispatchers.IO) {
-                    fetchFeedersFromAPI(token)
+            try {
+                val token = SessionManager.getToken(requireContext())
+                Log.d(TAG, "🔑 Using token: ${token.take(30)}...")
+
+                val response = withContext(Dispatchers.IO) {
+                    val url = URL(FEEDER_LIST_URL)
+                    val connection = url.openConnection() as HttpURLConnection
+
+                    connection.requestMethod = "GET"
+                    connection.connectTimeout = TIMEOUT
+                    connection.readTimeout = TIMEOUT
+                    connection.setRequestProperty("Accept", "application/json")
+                    connection.setRequestProperty("Authorization", "Bearer $token")
+
+                    val responseCode = connection.responseCode
+                    Log.d(TAG, "📡 Response code: $responseCode")
+
+                    if (responseCode == HttpURLConnection.HTTP_OK) {
+                        val reader = BufferedReader(InputStreamReader(connection.inputStream))
+                        val response = reader.readText()
+                        reader.close()
+                        Log.d(TAG, "✅ SUCCESS! Response: ${response.take(200)}...")
+                        response
+                    } else {
+                        val errorMsg = ApiErrorHandler.fromErrorStream(connection.errorStream, responseCode)
+                        throw Exception(errorMsg)
+                    }
                 }
 
-                // Extract station name and feeders from result
-                stationName = result.station
-                val feeders = result.feeders
+                val json = JSONObject(response)
+                val success = json.optBoolean("success", false)
 
-                Log.d(TAG, "✅ API SUCCESS!")
+                if (!success) {
+                    throw Exception(json.optString("message", "Failed to load feeders"))
+                }
+
+                // Parse username as station name
+                stationName = json.optString("username", "")
                 Log.d(TAG, "🏢 Station: $stationName")
-                Log.d(TAG, "📋 Feeders: ${feeders.size}")
 
-                // Update feeder list
+                // Parse feeders
+                val dataArray = json.getJSONArray("data")
+                val feeders = mutableListOf<FeederData>()
+
+                for (i in 0 until dataArray.length()) {
+                    val item = dataArray.getJSONObject(i)
+                    val feeder = FeederData(
+                        feederCode = item.optString("FEEDER_CODE", null),
+                        feederName = item.getString("FEEDER_NAME"),
+                        feederCategory = item.getString("FEEDER_CATEGORY")
+                    )
+                    feeders.add(feeder)
+                }
+
+                Log.d(TAG, "✅ Parsed ${feeders.size} feeders")
                 allFeeders.clear()
                 allFeeders.addAll(feeders)
 
@@ -236,9 +416,6 @@ class ConsumptionEntryFragment : Fragment() {
         }
     }
 
-    /**
-     * Setup feeder spinner with loaded feeders
-     */
     private fun setupFeederSpinner() {
         Log.d(TAG, "─────────────────────────────────────")
         Log.d(TAG, "🎯 setupFeederSpinner() START")
@@ -300,10 +477,6 @@ class ConsumptionEntryFragment : Fragment() {
         }
     }
 
-    /**
-     * ✅ FIXED: Fetch existing data for selected feeder and display
-     * Now handles null feeder codes by using feeder_name
-     */
     private fun fetchExistingDataAndDisplay(selected: FeederData) {
         lifecycleScope.launch {
             try {
@@ -312,7 +485,6 @@ class ConsumptionEntryFragment : Fragment() {
 
                 Log.d(TAG, "📥 Fetching existing data for ${selected.feederName} on $selectedDate")
 
-                // ✅ FIX: Pass both feederCode AND feederName
                 val existingData = fetchExistingConsumptionData(
                     token,
                     feederId = selected.feederCode,
@@ -359,10 +531,6 @@ class ConsumptionEntryFragment : Fragment() {
         }
     }
 
-    /**
-     * ✅ FIXED: Fetch existing consumption data from API
-     * Now handles null feeder codes by using feeder_name in request
-     */
     private suspend fun fetchExistingConsumptionData(
         token: String,
         feederId: String?,
@@ -383,269 +551,189 @@ class ConsumptionEntryFragment : Fragment() {
             connection.doOutput = true
             connection.doInput = true
 
-            // ✅ FIX: Build request body based on whether code exists
             val jsonBody = JSONObject().apply {
-                // Only include feeder_id if it's not null
                 feederId?.let { put("feeder_id", it) }
-                put("feeder_name", feederName)  // ✅ Always include feeder_name as fallback
+                put("feeder_name", feederName)
                 put("date", date)
             }
 
             Log.d(TAG, "📤 Fetch request: $jsonBody")
 
-            // Send request
             val writer = OutputStreamWriter(connection.outputStream)
             writer.write(jsonBody.toString())
             writer.flush()
             writer.close()
 
             val responseCode = connection.responseCode
-            Log.d(TAG, "📥 Response code: $responseCode")
+            Log.d(TAG, "📡 Fetch response code: $responseCode")
 
             if (responseCode == HttpURLConnection.HTTP_OK) {
                 val reader = BufferedReader(InputStreamReader(connection.inputStream))
                 val response = reader.readText()
                 reader.close()
 
-                // ✅ LOG FULL RESPONSE
-                Log.d(TAG, "📥 FULL Response: $response")
+                Log.d(TAG, "✅ Fetch response: ${response.take(200)}")
 
-                // Parse response
-                val jsonObject = JSONObject(response)
-                val success = jsonObject.optBoolean("success", false)
+                val json = JSONObject(response)
+                val dataArray = json.optJSONArray("data")
 
-                if (success) {
-                    val dataArray = jsonObject.optJSONArray("data")
+                if (dataArray != null && dataArray.length() > 0) {
+                    val item = dataArray.getJSONObject(0)
 
-                    // ✅ LOG ARRAY
-                    Log.d(TAG, "📊 Data array length: ${dataArray?.length() ?: 0}")
-
-                    if (dataArray != null && dataArray.length() > 0) {
-                        val item = dataArray.getJSONObject(0)
-
-                        // ✅ LOG EACH FIELD
-                        Log.d(TAG, "🔍 FEEDER_NAME: ${item.optString("FEEDER_NAME")}")
-                        Log.d(TAG, "🔍 TOTAL_CONSUMPTION: ${item.optString("TOTAL_CONSUMPTION")}")
-                        Log.d(TAG, "🔍 SUPPLY_3PH: ${item.optString("SUPPLY_3PH")}")
-                        Log.d(TAG, "🔍 SUPPLY_1PH: ${item.optString("SUPPLY_1PH")}")
-                        Log.d(TAG, "🔍 REMARK: ${item.optString("REMARK")}")
-
-                        val totalConsumption = item.optDouble("TOTAL_CONSUMPTION")
-                        Log.d(TAG, "🔍 TC as double: $totalConsumption, isNaN: ${totalConsumption.isNaN()}")
-
-                        // Return existing data
-                        val result = EntryConsumptionData(
-                            feederName = item.optString("FEEDER_NAME", ""),
-                            feederCode = feederId,
-                            feederCategory = item.optString("FEEDER_CATEGORY", ""),
-                            remark = item.optString("REMARK", "PROPER"),
-                            totalConsumption = totalConsumption.takeIf { !it.isNaN() },
-                            supply3ph = item.optString("SUPPLY_3PH", ""),
-                            supply1ph = item.optString("SUPPLY_1PH", "")
-                        )
-
-                        Log.d(TAG, "✅ Returning: TC=${result.totalConsumption}, 3PH=${result.supply3ph}, 1PH=${result.supply1ph}")
-
-                        return@withContext result
-                    }
+                    // ✅ FIXED: Properly handle null values from backend
+                    EntryConsumptionData(
+                        feederName = item.optString("FEEDER_NAME", feederName ?: ""),
+                        feederCode = item.optString("FEEDER_CODE", feederId),
+                        feederCategory = item.optString("FEEDER_CATEGORY", null),
+                        remark = if (item.isNull("REMARK")) null else item.optString("REMARK", null),
+                        totalConsumption = if (item.isNull("TOTAL_CONSUMPTION")) null else item.optDouble("TOTAL_CONSUMPTION"),
+                        supply3ph = if (item.isNull("SUPPLY_3PH")) "" else item.optString("SUPPLY_3PH", ""),
+                        supply1ph = if (item.isNull("SUPPLY_1PH")) "" else item.optString("SUPPLY_1PH", "")
+                    )
+                } else {
+                    null
                 }
             } else {
-                Log.w(TAG, "⚠️ No existing data (HTTP $responseCode)")
+                Log.w(TAG, "⚠️ No existing data (${responseCode})")
+                null
             }
-
-            null // No data found
-
         } catch (e: Exception) {
-            Log.w(TAG, "⚠️ Error fetching existing data: ${e.message}")
-            e.printStackTrace()
-            null // Return null on error
+            Log.e(TAG, "⚠️ Error fetching existing data: ${e.message}")
+            null
         } finally {
             connection?.disconnect()
         }
     }
 
-    /**
-     * Fetch feeders from API and extract station name
-     */
-    private suspend fun fetchFeedersFromAPI(token: String): FeedersResponse = withContext(Dispatchers.IO) {
-        val url = URL(FEEDER_LIST_URL)
-        val connection = url.openConnection() as HttpURLConnection
-
-        try {
-            connection.apply {
-                requestMethod = "GET"
-                connectTimeout = TIMEOUT
-                readTimeout = TIMEOUT
-                setRequestProperty("Accept", "application/json")
-                setRequestProperty("Authorization", "Bearer $token")
-            }
-
-            val responseCode = connection.responseCode
-
-            if (responseCode == HttpURLConnection.HTTP_OK) {
-                val response = BufferedReader(InputStreamReader(connection.inputStream)).use { it.readText() }
-                parseFeedersResponse(response)
-            } else {
-                // ✅ FIXED: Parse server error message instead of throwing raw code
-                val errorMsg = ApiErrorHandler.fromErrorStream(connection.errorStream, responseCode)
-                throw Exception(errorMsg)
-            }
-        } finally {
-            connection.disconnect()
+    private fun refreshData() {
+        val selectedPosition = binding.spinnerFeeder.selectedItemPosition
+        if (selectedPosition >= 0 && selectedPosition < allFeeders.size) {
+            fetchExistingDataAndDisplay(allFeeders[selectedPosition])
+            Snackbar.make(binding.root, "Data refreshed", Snackbar.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(context, "Select a feeder first", Toast.LENGTH_SHORT).show()
         }
     }
 
-    /**
-     * Parse API response to extract station name and feeders
-     */
-    private fun parseFeedersResponse(jsonString: String): FeedersResponse {
-        val feeders = mutableListOf<FeederData>()
-        var station = ""
+    private fun navigateToView() {
+        findNavController().navigate(R.id.action_consumptionEntryFragment_to_dailyParameterEntryFragment)
+    }
 
-        try {
-            val jsonObject = JSONObject(jsonString)
-            val success = jsonObject.optBoolean("success", false)
+    // ============================================================================
+    // ✅ UPDATED submitData() - WITH VALIDATION
+    // ============================================================================
 
-            if (!success) {
-                throw Exception(jsonObject.optString("message", "Failed to fetch feeders"))
-            }
+    private fun submitData() {
+        val data = adapter.getCurrentData()
 
-            // Extract station name from response
-            station = jsonObject.optString("station", "")
-            Log.d(TAG, "🏢 Parsed station: $station")
+        // ✅ CRITICAL: Check for validation errors FIRST
+        if (adapter.hasValidationErrors()) {
+            // ✅ FIX: Actual entered value ke saath specific error message dikhao
+            val supply3ph = data?.supply3ph?.trim() ?: ""
+            val supply1ph = data?.supply1ph?.trim() ?: ""
 
-            val dataArray = jsonObject.optJSONArray("data")
-
-            if (dataArray != null) {
-                for (i in 0 until dataArray.length()) {
-                    val item = dataArray.getJSONObject(i)
-                    val feeder = FeederData(
-                        feederCode = if (item.isNull("FEEDER_CODE")) null else item.optString("FEEDER_CODE"),
-                        feederName = item.optString("FEEDER_NAME", ""),
-                        feederCategory = item.optString("FEEDER_CATEGORY", "")
-                    )
-                    feeders.add(feeder)
-                    Log.d(TAG, "  ➕ ${feeder.feederName} (${feeder.feederCode})")
+            val errorDetail = buildString {
+                if (supply3ph.isNotEmpty() && !isValidTimeOrInRange(supply3ph)) {
+                    appendLine("• 3PH: \"$supply3ph\" — 24:00 se zyada allowed nahi hai")
+                }
+                if (supply1ph.isNotEmpty() && !isValidTimeOrInRange(supply1ph)) {
+                    appendLine("• 1PH: \"$supply1ph\" — 24:00 se zyada allowed nahi hai")
+                }
+                if (isEmpty()) {
+                    appendLine("• Koi invalid time value field mein hai")
                 }
             }
 
-            Log.d(TAG, "✅ Parsed: $station with ${feeders.size} feeders")
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Parse error", e)
-            throw e
-        }
-
-        return FeedersResponse(station, feeders)
-    }
-
-    /**
-     * Validate and submit data
-     */
-    private fun validateAndSubmitData() {
-        if (selectedFeederData == null) {
-            Toast.makeText(context, "Please select a feeder first", Toast.LENGTH_SHORT).show()
+            AlertDialog.Builder(requireContext())
+                .setTitle("❌ Validation Error")
+                .setMessage("""
+                    Galat time value hai! Submit nahi ho sakta.
+                    
+                    $errorDetail
+                    ✅ Allowed range: 00:00 to 24:00
+                    
+                    Kripya sahi value enter karein.
+                """.trimIndent())
+                .setPositiveButton("Theek Hai") { dialog, _ ->
+                    dialog.dismiss()
+                }
+                .setCancelable(false)
+                .show()
             return
         }
 
-        val data = adapter.getCurrentData() ?: selectedFeederData!!
-
-        // Check if any data entered
-        val hasData = (data.totalConsumption != null && data.totalConsumption!! > 0) ||
-                !data.supply3ph.isNullOrEmpty() ||
-                !data.supply1ph.isNullOrEmpty() ||
-                !data.remark.isNullOrEmpty()
-
-        if (!hasData) {
-            Toast.makeText(
-                context,
-                "Please enter at least one field",
-                Toast.LENGTH_SHORT
-            ).show()
+        if (data == null) {
+            showError("No data to submit. Please select a feeder first.")
             return
         }
 
-        // ✅ Build confirmation message - show station only if available
-        val confirmMessage = buildString {
-            append("Submit data?\n\n")
-            append("Feeder: ${data.feederName}\n")
-            append("Date: ${dateFormat.format(calendar.time)}")
-            if (stationName.isNotEmpty()) {
-                append("\nStation: $stationName")
-            }
+        // ✅ CRITICAL: Validate BEFORE submitting
+        Log.d(TAG, "🔍 Validating data: 3PH=${data.supply3ph}, 1PH=${data.supply1ph}")
+        val validationError = validateBeforeSubmit(data)
+        if (validationError != null) {
+            Log.e(TAG, "❌ VALIDATION FAILED - SUBMISSION BLOCKED!")
+            Log.e(TAG, "Error: $validationError")
+
+            // ✅ Show AlertDialog for better visibility
+            AlertDialog.Builder(requireContext())
+                .setTitle("❌ Validation Failed")
+                .setMessage(validationError)
+                .setPositiveButton("OK") { dialog, _ ->
+                    dialog.dismiss()
+                }
+                .setCancelable(false)
+                .show()
+
+            return // ❌ BLOCK submission
         }
 
-        // Confirm submission
-        AlertDialog.Builder(requireContext())
-            .setTitle("Confirm Submission")
-            .setMessage(confirmMessage)
-            .setPositiveButton("Submit") { _, _ ->
-                submitDataToAPI(listOf(data))
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    /**
-     * Submit data to API
-     */
-    private fun submitDataToAPI(dataList: List<EntryConsumptionData>) {
-        val token = SessionManager.getToken(requireContext())
-
-        if (token.isEmpty()) {
-            Snackbar.make(binding.root, "Authentication token missing", Snackbar.LENGTH_LONG).show()
-            return
-        }
-
-        Log.d(TAG, "🚀 Submitting data...")
-        showLoading(true, "Submitting...")
-
+        Log.d(TAG, "✅ Validation passed - proceeding with submission")
         lifecycleScope.launch {
+            showLoading(true, "Submitting...")
+
             try {
+                val token = SessionManager.getToken(requireContext())
                 val selectedDate = dateFormat.format(calendar.time)
 
-                val result = withContext(Dispatchers.IO) {
-                    submitToAPI(token, dataList, selectedDate)
-                }
+                Log.d(TAG, "📤 Submitting data for ${data.feederName}")
 
-                if (result.success) {
-                    // ✅ Build success message - show station only if available
-                    val successMessage = buildString {
-                        append("✓ Data saved!\n\n")
-                        if (stationName.isNotEmpty()) {
-                            append("Station: $stationName\n")
-                        }
-                        append("Date: $selectedDate\n")
-                        append("Feeder: ${dataList[0].feederName}")
+                val result = submitToAPI(token, listOf(data), selectedDate)
+
+                withContext(Dispatchers.Main) {
+                    if (result.success) {
+                        val successMessage = result.message.ifEmpty { "Data saved successfully!" }
+
+                        AlertDialog.Builder(requireContext())
+                            .setTitle("✅ Success")
+                            .setMessage(successMessage)
+                            .setPositiveButton("OK") { _, _ ->
+                                // Refresh to show saved data
+                                refreshData()
+                            }
+                            .setCancelable(false)
+                            .show()
+                    } else {
+                        showError("Save failed: ${result.message}")
                     }
-
-                    AlertDialog.Builder(requireContext())
-                        .setTitle("Success")
-                        .setMessage(successMessage)
-                        .setPositiveButton("OK") { _, _ ->
-                            selectedFeederData = null
-                            adapter.clearData()
-                            fetchFeederList()
-
-                            // ✅ NAVIGATE TO HOMEPAGE
-                            findNavController().popBackStack()
-                        }
-                        .show()
-                } else {
-                    showError("Save failed: ${result.message}")
                 }
 
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Submit error", e)
-                showError(ApiErrorHandler.handle(e))
+                withContext(Dispatchers.Main) {
+                    showError(ApiErrorHandler.handle(e))
+                }
             } finally {
-                showLoading(false)
+                withContext(Dispatchers.Main) {
+                    showLoading(false)
+                }
             }
         }
     }
 
-    /**
-     * Submit to save API
-     */
+    // ============================================================================
+    // ✅ UPDATED submitToAPI() - FIXED NULL HANDLING
+    // ============================================================================
+
     private suspend fun submitToAPI(
         token: String,
         dataList: List<EntryConsumptionData>,
@@ -670,19 +758,43 @@ class ConsumptionEntryFragment : Fragment() {
             dataList.forEach { item ->
                 val rowObject = JSONObject().apply {
                     put("date", date)
-                    put("station_name", stationName)
                     put("feeder_name", item.feederName)
-                    item.feederCode?.let { put("feeder_code", it) }
-                    put("feeder_category", item.feederCategory ?: "")
-                    put("remark", item.remark ?: "")
-                    put("total_consumption", item.totalConsumption ?: 0.0)
-                    put("supply_3ph", item.supply3ph ?: "")
-                    put("supply_1ph", item.supply1ph ?: "")
+
+                    // ✅ CRITICAL FIX: Send actual null, not "null" string
+                    if (item.feederCode.isNullOrBlank() || item.feederCode == "null") {
+                        put("feeder_code", JSONObject.NULL)
+                    } else {
+                        put("feeder_code", item.feederCode)
+                    }
+
+                    put("feeder_category", item.feederCategory ?: JSONObject.NULL)
+
+                    if (item.remark.isNullOrBlank()) {
+                        put("remark", JSONObject.NULL)
+                    } else {
+                        put("remark", item.remark)
+                    }
+
+                    put("total_consumption", item.totalConsumption ?: JSONObject.NULL)
+
+                    // ✅ CRITICAL FIX: Send null for empty supply times
+                    if (item.supply3ph.isNullOrBlank()) {
+                        put("supply_3ph", JSONObject.NULL)
+                    } else {
+                        put("supply_3ph", item.supply3ph)
+                    }
+
+                    if (item.supply1ph.isNullOrBlank()) {
+                        put("supply_1ph", JSONObject.NULL)
+                    } else {
+                        put("supply_1ph", item.supply1ph)
+                    }
                 }
                 rowsArray.put(rowObject)
             }
 
             val requestBody = JSONObject().apply { put("rows", rowsArray) }
+            Log.d(TAG, "📤 Save request: $requestBody")
 
             OutputStreamWriter(connection.outputStream).use { writer ->
                 writer.write(requestBody.toString())
@@ -690,55 +802,24 @@ class ConsumptionEntryFragment : Fragment() {
             }
 
             val responseCode = connection.responseCode
+            Log.d(TAG, "📡 Save response code: $responseCode")
 
             if (responseCode == HttpURLConnection.HTTP_OK) {
                 val response = BufferedReader(InputStreamReader(connection.inputStream)).use { it.readText() }
+                Log.d(TAG, "✅ Save response: $response")
+
                 val jsonResponse = JSONObject(response)
                 SaveResult(
                     jsonResponse.optBoolean("success", false),
                     jsonResponse.optString("message", "")
                 )
             } else {
-                // ✅ FIXED: Show real server error message, not raw JSON or IP
                 val errorMsg = ApiErrorHandler.fromErrorStream(connection.errorStream, responseCode)
                 SaveResult(false, errorMsg)
             }
         } finally {
             connection.disconnect()
         }
-    }
-
-    /**
-     * Show data summary
-     */
-    private fun showDataSummary() {
-        if (selectedFeederData == null) {
-            Toast.makeText(context, "No data. Select a feeder first.", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val data = adapter.getCurrentData() ?: selectedFeederData!!
-
-        // ✅ Build summary - show station only if available
-        val summary = buildString {
-            append("📊 Current Data\n\n")
-            if (stationName.isNotEmpty()) {
-                append("Station: $stationName\n")
-            }
-            append("Feeder: ${data.feederName}\n")
-            append("Code: ${data.feederCode}\n\n")
-            append("Consumption: ${data.totalConsumption ?: "Not entered"} kWh\n")
-            append("Supply 3PH: ${data.supply3ph ?: "Not entered"}\n")
-            append("Supply 1PH: ${data.supply1ph ?: "Not entered"}\n")
-            append("Remark: ${data.remark ?: "None"}\n\n")
-            append("Date: ${dateFormat.format(calendar.time)}")
-        }
-
-        AlertDialog.Builder(requireContext())
-            .setTitle("Data Summary")
-            .setMessage(summary)
-            .setPositiveButton("OK", null)
-            .show()
     }
 
     private fun showLoading(show: Boolean, message: String = "Loading...") {
@@ -808,7 +889,7 @@ data class SaveResult(
 )
 
 /**
- * RecyclerView adapter
+ * ✅ FIXED RecyclerView adapter with proper null handling and 24:00 support
  */
 class EntryConsumptionDataAdapter(
     private val onDataChange: (EntryConsumptionData) -> Unit
@@ -830,6 +911,20 @@ class EntryConsumptionDataAdapter(
     fun clearData() {
         currentData = null
         notifyDataSetChanged()
+    }
+
+    // ✅ NEW: Check if there are validation errors
+    private var has3phError = false
+    private var has1phError = false
+
+    fun hasValidationErrors(): Boolean = has3phError || has1phError
+
+    fun setValidationError(is3ph: Boolean, hasError: Boolean) {
+        if (is3ph) {
+            has3phError = hasError
+        } else {
+            has1phError = hasError
+        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -866,7 +961,10 @@ class EntryConsumptionDataAdapter(
         }
 
         /**
-         * Setup automatic HH:MM formatting as user types
+         * ✅ ENHANCED: Automatic HH:MM formatting with STRICT minute validation
+         * - Auto-inserts colon after 2 digits
+         * - Blocks minutes > 59 in real-time
+         * - Prevents invalid input before submission
          */
         private fun setupTimeInputFormatting(editText: EditText) {
             editText.addTextChangedListener(object : TextWatcher {
@@ -884,10 +982,35 @@ class EntryConsumptionDataAdapter(
 
                     if (input.length >= 2) {
                         val formatted = buildString {
+                            // Hours part (first 2 digits)
                             append(input.substring(0, 2))
+
                             if (input.length > 2) {
                                 append(":")
-                                append(input.substring(2, minOf(4, input.length)))
+
+                                // ✅ CRITICAL: Validate minutes in real-time
+                                val minutesPart = input.substring(2, minOf(4, input.length))
+
+                                // ✅ Check if minutes are valid (00-59)
+                                if (minutesPart.length == 2) {
+                                    val minutes = minutesPart.toIntOrNull() ?: 0
+                                    if (minutes > 59) {
+                                        // ❌ Invalid minutes - clear the field
+                                        editText.setText("")
+                                        editText.error = "❌ Minutes must be 00-59 (not ${minutes})"
+
+                                        android.widget.Toast.makeText(
+                                            editText.context,
+                                            "❌ Invalid minutes: $minutes\nMinutes must be between 00-59",
+                                            android.widget.Toast.LENGTH_SHORT
+                                        ).show()
+
+                                        isFormatting = false
+                                        return
+                                    }
+                                }
+
+                                append(minutesPart)
                             }
                         }
 
@@ -903,34 +1026,39 @@ class EntryConsumptionDataAdapter(
         }
 
         fun bind(data: EntryConsumptionData, date: String, station: String) {
+            // ✅ FIXED: Display category or empty string (not "null")
             tvCategory.text = data.feederCategory ?: ""
 
-            etRemark.setText(data.remark ?: "")
-            etTotal.setText(data.totalConsumption?.toString() ?: "")
+            // ✅ FIXED: Handle null values properly - show empty string, not "null"
+            etRemark.setText(if (data.remark.isNullOrBlank()) "" else data.remark)
+            etTotal.setText(if (data.totalConsumption == null) "" else data.totalConsumption.toString())
 
-            // Set time values from data
-            etSupply3ph.setText(data.supply3ph ?: "")
-            etSupply1ph.setText(data.supply1ph ?: "")
+            // ✅ Set time values from data - show empty string for null
+            etSupply3ph.setText(if (data.supply3ph.isNullOrBlank()) "" else data.supply3ph)
+            etSupply1ph.setText(if (data.supply1ph.isNullOrBlank()) "" else data.supply1ph)
 
             // Text watchers
-            setupTextWatcher(etRemark) { data.remark = it }
+            setupTextWatcher(etRemark) { data.remark = it.ifBlank { null } }
             setupTextWatcher(etTotal) { data.totalConsumption = it.toDoubleOrNull() }
 
             // Time validation watchers with 24-hour total check
             setupTimeWatcher(etSupply3ph, etSupply1ph) { time3ph ->
-                data.supply3ph = time3ph
+                data.supply3ph = time3ph.ifBlank { null }
                 Log.d("ConsumptionEntry", "⏰ 3PH time = $time3ph")
             }
 
             setupTimeWatcher(etSupply1ph, etSupply3ph) { time1ph ->
-                data.supply1ph = time1ph
+                data.supply1ph = time1ph.ifBlank { null }
                 Log.d("ConsumptionEntry", "⏰ 1PH time = $time1ph")
             }
         }
 
         /**
-         * Setup time watcher with validation
-         * Validates HH:MM format and ensures 3PH + 1PH <= 24:00
+         * ✅ ENHANCED: Setup time watcher with STRICT validation and error tracking
+         * - Validates format (HH:MM, 00:00 to 24:00)
+         * - Checks if individual field > 24:00
+         * - Checks if total (3PH + 1PH) > 24:00
+         * - Tracks validation errors with flags
          */
         private fun setupTimeWatcher(
             currentField: EditText,
@@ -938,24 +1066,68 @@ class EntryConsumptionDataAdapter(
             onTimeChanged: (String) -> Unit
         ) {
             currentField.addTextChangedListener(object : TextWatcher {
-                override fun afterTextChanged(s: Editable?) {
-                    val timeStr = s.toString().trim()
+                private var isFormatting = false
 
-                    // Skip if empty
+                override fun afterTextChanged(s: Editable?) {
+                    if (isFormatting) return
+
+                    val timeStr = s.toString().trim()
+                    val is3phField = (currentField.id == etSupply3ph.id)
+
+                    // Skip if empty - clear data AND error flag
                     if (timeStr.isEmpty()) {
                         onTimeChanged("")
                         currentField.error = null
+                        otherField.error = null
+
+                        // ✅ Clear error flag when field is empty
+                        (itemView.parent?.parent as? RecyclerView)?.adapter?.let { adapter ->
+                            if (adapter is EntryConsumptionDataAdapter) {
+                                adapter.setValidationError(is3phField, false)
+                            }
+                        }
                         return
                     }
 
                     // Validate HH:MM format
                     if (!isValidTimeFormat(timeStr)) {
-                        currentField.error = "Invalid format. Use HH:MM (00:00 to 23:59)"
+                        currentField.error = "Invalid format. Use HH:MM (00:00 to 24:00)"
+                        onTimeChanged(timeStr)  // ✅ FIX: value preserve karo
+
+                        // ✅ SET error flag
+                        (itemView.parent?.parent as? RecyclerView)?.adapter?.let { adapter ->
+                            if (adapter is EntryConsumptionDataAdapter) {
+                                adapter.setValidationError(is3phField, true)
+                            }
+                        }
                         return
                     }
 
-                    // Parse current and other time
+                    // Parse current field value
                     val currentMinutes = parseTimeToMinutes(timeStr)
+
+                    // ✅ CRITICAL: Check if current field alone > 24:00
+                    if (currentMinutes > 1440) {
+                        currentField.error = "❌ 24:00 se zyada allowed nahi hai!"
+                        onTimeChanged(timeStr)  // ✅ FIX: value preserve karo (clear mat karo), error flag block karega submit
+
+                        // ✅ SET error flag
+                        (itemView.parent?.parent as? RecyclerView)?.adapter?.let { adapter ->
+                            if (adapter is EntryConsumptionDataAdapter) {
+                                adapter.setValidationError(is3phField, true)
+                            }
+                        }
+
+                        android.widget.Toast.makeText(
+                            currentField.context,
+                            "❌ Time 24:00 se zyada nahi ho sakta!",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+
+                        return
+                    }
+
+                    // Parse other field value
                     val otherTimeStr = otherField.text.toString().trim()
                     val otherMinutes = if (otherTimeStr.isNotEmpty() && isValidTimeFormat(otherTimeStr)) {
                         parseTimeToMinutes(otherTimeStr)
@@ -963,33 +1135,72 @@ class EntryConsumptionDataAdapter(
                         0
                     }
 
-                    // Validate total <= 24 hours (1440 minutes)
+                    // ✅ CRITICAL: Validate total <= 24:00 (1440 minutes)
                     val totalMinutes = currentMinutes + otherMinutes
                     if (totalMinutes > 1440) {
-                        currentField.error = "❌ Total supply time (3PH + 1PH) cannot exceed 24:00 hours"
+                        val totalTime = convertMinutesToTime(totalMinutes)
+                        val current3ph = if (currentField.id == etSupply3ph.id) timeStr else otherTimeStr
+                        val current1ph = if (currentField.id == etSupply1ph.id) timeStr else otherTimeStr
+
+                        currentField.error = "Total > 24:00 ho gaya!"
+                        otherField.error = "Total > 24:00 ho gaya!"
+                        onTimeChanged(timeStr)  // ✅ FIX: value preserve karo, error flag block karega submit
+
+                        // ✅ SET error flag for current field
+                        (itemView.parent?.parent as? RecyclerView)?.adapter?.let { adapter ->
+                            if (adapter is EntryConsumptionDataAdapter) {
+                                adapter.setValidationError(is3phField, true)
+                            }
+                        }
+
+                        android.widget.Toast.makeText(
+                            currentField.context,
+                            "❌ Total exceeds 24:00!\n3PH=$current3ph + 1PH=$current1ph = $totalTime",
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+
                         return
                     }
 
-                    // All validations passed
+                    // ✅ All validations passed - clear errors, clear flags, update data
                     currentField.error = null
-                    onTimeChanged(timeStr)
+                    otherField.error = null
+
+                    // ✅ CLEAR error flag when valid
+                    (itemView.parent?.parent as? RecyclerView)?.adapter?.let { adapter ->
+                        if (adapter is EntryConsumptionDataAdapter) {
+                            adapter.setValidationError(is3phField, false)
+                        }
+                    }
+
+                    onTimeChanged(timeStr)  // ✅ Save valid data
                 }
+
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             })
         }
 
+
         /**
-         * Validate HH:MM format
+         * ✅ FIXED: Validate HH:MM format - STRICT VALIDATION
+         * - Hours: 00-24
+         * - Minutes: 00-59 (NOT 60-99!)
+         * - Special: 24:00 allowed, 24:01+ NOT allowed
          */
         private fun isValidTimeFormat(time: String): Boolean {
-            if (!time.matches(Regex("^\\d{2}:\\d{2}$"))) return false
+            // ✅ CRITICAL: Use [0-5][0-9] to allow only 00-59 for minutes
+            if (!time.matches(Regex("^\\d{1,2}:[0-5][0-9]$"))) return false
 
             val parts = time.split(":")
             val hours = parts[0].toIntOrNull() ?: return false
             val minutes = parts[1].toIntOrNull() ?: return false
 
-            return hours in 0..23 && minutes in 0..59
+            // ✅ Additional validation:
+            // - Hours: 0-24
+            // - Minutes: 0-59
+            // - Exception: 24:00 is valid, 24:01+ is invalid
+            return hours in 0..24 && minutes in 0..59 && !(hours == 24 && minutes > 0)
         }
 
         /**
@@ -1000,6 +1211,15 @@ class EntryConsumptionDataAdapter(
             val hours = parts[0].toIntOrNull() ?: 0
             val minutes = parts[1].toIntOrNull() ?: 0
             return (hours * 60) + minutes
+        }
+
+        /**
+         * ✅ Convert minutes to HH:MM
+         */
+        private fun convertMinutesToTime(totalMinutes: Int): String {
+            val hours = totalMinutes / 60
+            val minutes = totalMinutes % 60
+            return String.format("%02d:%02d", hours, minutes)
         }
 
         /**

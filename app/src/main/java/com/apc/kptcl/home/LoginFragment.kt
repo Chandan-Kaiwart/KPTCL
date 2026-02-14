@@ -11,6 +11,8 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.text.InputType
 import android.util.Log
@@ -18,6 +20,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
+import android.widget.Button
+import android.widget.ProgressBar
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -26,7 +31,6 @@ import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
-import com.apc.kptcl.BuildConfig
 import com.apc.kptcl.R
 import com.apc.kptcl.databinding.FragmentLoginBinding
 import com.apc.kptcl.utils.SessionManager
@@ -55,8 +59,12 @@ class LoginFragment : Fragment() {
     private var downloadId: Long = -1
     private var downloadReceiver: BroadcastReceiver? = null
 
-    // ✅ Track whether download is for auto-update (silent) or manual
-    private var isAutoUpdate = false
+    // Download progress dialog components
+    private var progressDialog: AlertDialog? = null
+    private var progressBar: ProgressBar? = null
+    private var tvDownloadProgress: TextView? = null
+    private val progressHandler = Handler(Looper.getMainLooper())
+    private var progressRunnable: Runnable? = null
 
     private val escomList = listOf(
         "BESCOM",
@@ -68,12 +76,8 @@ class LoginFragment : Fragment() {
 
     companion object {
         private const val TAG = "LoginFragment"
-        private const val BASE_URL = "http://62.72.59.119:8000"
+        private const val BASE_URL = "http://62.72.59.119:7000"
         private const val APK_DOWNLOAD_URL = "https://api.vidyut-suvidha.in/apk"
-
-        // ✅ Version check endpoint - server should return { "latest_version": "1.5" }
-        private const val VERSION_CHECK_URL = "https://api.vidyut-suvidha.in/version"
-
         private const val APK_FILE_NAME = "KPTCL_App_Latest.apk"
     }
 
@@ -92,6 +96,7 @@ class LoginFragment : Fragment() {
     private val installPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { _ ->
+        // After user grants install permission, check again
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (requireContext().packageManager.canRequestPackageInstalls()) {
                 Log.d(TAG, "Install permission granted")
@@ -113,150 +118,12 @@ class LoginFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // ✅ Set version from BuildConfig - single source of truth
-        // Build.gradle.kts mein versionName change karo, yahan automatically update ho jayega
-        binding.tvAppVersion.text = "V-${BuildConfig.VERSION_NAME}"
-
         setupEscomDropdown()
         generateCaptcha()
         setupClickListeners()
+        checkExistingSession()
         setupDownloadReceiver()
-
-        // ✅ Check for updates first, then check existing session
-        // Agar update available hai toh pehle update karo
-        checkForUpdateThenSession()
     }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // ✅ AUTO-UPDATE LOGIC
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-    /**
-     * Pehle version check karta hai server pe.
-     * Agar naya version hai toh update dialog dikhata hai.
-     * Agar nahi toh existing session check karta hai.
-     */
-    private fun checkForUpdateThenSession() {
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                Log.d(TAG, "🔍 Checking for app update... Current version: ${BuildConfig.VERSION_NAME}")
-
-                val url = URL(VERSION_CHECK_URL)
-                val connection = url.openConnection() as HttpURLConnection
-                connection.requestMethod = "GET"
-                connection.setRequestProperty("Accept", "application/json")
-                connection.connectTimeout = 8000
-                connection.readTimeout = 8000
-
-                val responseCode = connection.responseCode
-
-                if (responseCode == HttpURLConnection.HTTP_OK) {
-                    val reader = BufferedReader(InputStreamReader(connection.inputStream))
-                    val response = StringBuilder()
-                    var line: String?
-                    while (reader.readLine().also { line = it } != null) {
-                        response.append(line)
-                    }
-                    reader.close()
-
-                    val json = JSONObject(response.toString())
-                    // ✅ Server se latest_version field padhta hai, e.g. { "latest_version": "1.5" }
-                    val latestVersion = json.optString("latest_version", "")
-
-                    Log.d(TAG, "📡 Server latest version: '$latestVersion', App version: '${BuildConfig.VERSION_NAME}'")
-
-                    withContext(Dispatchers.Main) {
-                        if (latestVersion.isNotEmpty() && isNewerVersion(latestVersion, BuildConfig.VERSION_NAME)) {
-                            // ✅ Naya version available hai - update dialog dikhao
-                            Log.d(TAG, "🆕 Update available: $latestVersion")
-                            showUpdateDialog(latestVersion)
-                        } else {
-                            // ✅ Already latest - normal session check
-                            Log.d(TAG, "✅ App is up to date")
-                            checkExistingSession()
-                        }
-                    }
-                } else {
-                    Log.w(TAG, "⚠️ Version check failed with code: $responseCode - proceeding normally")
-                    withContext(Dispatchers.Main) {
-                        checkExistingSession()
-                    }
-                }
-
-                connection.disconnect()
-
-            } catch (e: Exception) {
-                // ✅ Network error? Koi baat nahi - silently skip, normal flow continue karo
-                Log.w(TAG, "⚠️ Version check error (network?): ${e.message} - proceeding normally")
-                withContext(Dispatchers.Main) {
-                    checkExistingSession()
-                }
-            }
-        }
-    }
-
-    /**
-     * ✅ Version compare karta hai.
-     * Returns true agar serverVersion > appVersion
-     * e.g. "1.5" > "1.4" → true
-     *      "1.4" > "1.4" → false
-     *      "1.3" > "1.4" → false
-     */
-    private fun isNewerVersion(serverVersion: String, appVersion: String): Boolean {
-        return try {
-            val serverParts = serverVersion.trim().split(".").map { it.toIntOrNull() ?: 0 }
-            val appParts = appVersion.trim().split(".").map { it.toIntOrNull() ?: 0 }
-
-            // Dono lists ko same length banao
-            val maxLen = maxOf(serverParts.size, appParts.size)
-            val sParts = serverParts + List(maxLen - serverParts.size) { 0 }
-            val aParts = appParts + List(maxLen - appParts.size) { 0 }
-
-            for (i in 0 until maxLen) {
-                when {
-                    sParts[i] > aParts[i] -> return true
-                    sParts[i] < aParts[i] -> return false
-                }
-            }
-            false // Same version
-        } catch (e: Exception) {
-            Log.e(TAG, "Version parse error: ${e.message}")
-            false
-        }
-    }
-
-    /**
-     * ✅ Update dialog - user ko batata hai update available hai
-     * User ke pas option hai: Abhi Update karo / Baad mein
-     * (Agar force update chahiye toh "Baad mein" button hata do)
-     */
-    private fun showUpdateDialog(latestVersion: String) {
-        if (!isAdded || context == null) return
-
-        AlertDialog.Builder(requireContext())
-            .setTitle("🆕 Update Available")
-            .setMessage(
-                "New version V-$latestVersion is available!\n\n" +
-                        "Current version: V-${BuildConfig.VERSION_NAME}\n\n" +
-                        "The app will update automatically. Please wait..."
-            )
-            .setCancelable(false)
-            // ✅ Auto-update silently
-            .setPositiveButton("Update Now") { _, _ ->
-                isAutoUpdate = true
-                checkPermissionsAndDownload()
-            }
-            .setNegativeButton("Later") { _, _ ->
-                // User ne skip kiya - normal login flow
-                Log.d(TAG, "User skipped update")
-                checkExistingSession()
-            }
-            .show()
-    }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // ✅ SESSION CHECK
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     private fun checkExistingSession() {
         if (SessionManager.isLoggedIn(requireContext())) {
@@ -278,10 +145,6 @@ class LoginFragment : Fragment() {
             }
         }
     }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // ✅ UI SETUP
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     private fun setupEscomDropdown() {
         val adapter = ArrayAdapter(
@@ -353,20 +216,17 @@ class LoginFragment : Fragment() {
             attemptLogin()
         }
 
-        // ✅ Manual APK Download Button (normally hidden, auto-update handles it)
+        // ✅ APK Download Button
         binding.apkDownload.setOnClickListener {
-            isAutoUpdate = false
             downloadLatestAPK()
         }
     }
 
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // ✅ APK DOWNLOAD & INSTALL LOGIC
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-    // Manual download (button se)
+    // ✅ APK Download Function
     private fun downloadLatestAPK() {
-        Log.d(TAG, "📥 Manual APK Download triggered")
+        Log.d(TAG, "📥 APK Download button clicked")
+
+        // Show confirmation dialog
         AlertDialog.Builder(requireContext())
             .setTitle("Download Latest APK")
             .setMessage("Do you want to download and install the latest version of KPTCL App?")
@@ -404,6 +264,7 @@ class LoginFragment : Fragment() {
                 }
             }
 
+            // ✅ Android 5 and below - Direct download
             else -> {
                 startAPKDownload()
             }
@@ -424,10 +285,10 @@ class LoginFragment : Fragment() {
                 Log.d(TAG, "🗑️ Deleted old APK file")
             }
 
+            // Configure download request
             val request = DownloadManager.Request(Uri.parse(APK_DOWNLOAD_URL)).apply {
                 setTitle("KPTCL App Update")
                 setDescription("Downloading latest version...")
-                // ✅ Auto-update mein notification visible rahegi taaki user ko pata chale
                 setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                 setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, APK_FILE_NAME)
                 setMimeType("application/vnd.android.package-archive")
@@ -435,28 +296,21 @@ class LoginFragment : Fragment() {
                 setAllowedOverRoaming(true)
             }
 
+            // Start download
             val downloadManager = requireContext().getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
             downloadId = downloadManager.enqueue(request)
 
-            Log.d(TAG, "✅ Download started with ID: $downloadId (autoUpdate=$isAutoUpdate)")
+            Log.d(TAG, "✅ Download started with ID: $downloadId")
 
-            if (isAutoUpdate) {
-                // ✅ Auto-update: simple toast, user ko pata chale kuch ho raha hai
-                Toast.makeText(
-                    context,
-                    "📥 Downloading update... App will install automatically",
-                    Toast.LENGTH_LONG
-                ).show()
-            } else {
-                // Manual download toast
-                Toast.makeText(
-                    context,
-                    "📥 Downloading latest APK... Please wait",
-                    Toast.LENGTH_LONG
-                ).show()
-                binding.apkDownload.isEnabled = false
-                binding.apkDownload.text = "Downloading..."
-            }
+            // Show progress dialog
+            showDownloadProgressDialog()
+
+            // Start monitoring download progress
+            startProgressMonitoring()
+
+            // Disable button during download
+            binding.apkDownload.isEnabled = false
+            binding.apkDownload.text = "Downloading..."
 
         } catch (e: Exception) {
             Log.e(TAG, "❌ Download error: ${e.message}", e)
@@ -468,31 +322,141 @@ class LoginFragment : Fragment() {
         }
     }
 
+    private fun showDownloadProgressDialog() {
+        val dialogView = LayoutInflater.from(requireContext())
+            .inflate(R.layout.dialog_download_progress, null)
+
+        progressBar = dialogView.findViewById(R.id.progressBar)
+        tvDownloadProgress = dialogView.findViewById(R.id.tvDownloadProgress)
+        val btnCancelDownload = dialogView.findViewById<Button>(R.id.btnCancelDownload)
+
+        progressDialog = AlertDialog.Builder(requireContext())
+            .setView(dialogView)
+            .setCancelable(false)
+            .create()
+
+        btnCancelDownload.setOnClickListener {
+            cancelDownload()
+        }
+
+        progressDialog?.show()
+    }
+
+    private fun startProgressMonitoring() {
+        val downloadManager = requireContext().getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+
+        progressRunnable = object : Runnable {
+            override fun run() {
+                val query = DownloadManager.Query().setFilterById(downloadId)
+                val cursor = downloadManager.query(query)
+
+                if (cursor != null && cursor.moveToFirst()) {
+                    val bytesDownloadedIndex = cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
+                    val bytesTotalIndex = cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
+                    val statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
+
+                    val bytesDownloaded = cursor.getLong(bytesDownloadedIndex)
+                    val bytesTotal = cursor.getLong(bytesTotalIndex)
+                    val status = cursor.getInt(statusIndex)
+
+                    if (bytesTotal > 0) {
+                        val progress = ((bytesDownloaded * 100L) / bytesTotal).toInt()
+
+                        progressBar?.progress = progress
+
+                        val downloadedMB = bytesDownloaded / (1024.0 * 1024.0)
+                        val totalMB = bytesTotal / (1024.0 * 1024.0)
+
+                        tvDownloadProgress?.text = String.format(
+                            "%.2f MB / %.2f MB (%d%%)",
+                            downloadedMB,
+                            totalMB,
+                            progress
+                        )
+
+                        Log.d(TAG, "Download progress: $progress% - $downloadedMB MB / $totalMB MB")
+                    } else {
+                        tvDownloadProgress?.text = "Preparing download..."
+                    }
+
+                    // Check if download is complete or failed
+                    when (status) {
+                        DownloadManager.STATUS_SUCCESSFUL -> {
+                            Log.d(TAG, "Download completed successfully")
+                            dismissProgressDialog()
+                            cursor.close()
+                            return
+                        }
+                        DownloadManager.STATUS_FAILED -> {
+                            Log.e(TAG, "Download failed")
+                            dismissProgressDialog()
+                            Toast.makeText(context, "Download failed", Toast.LENGTH_SHORT).show()
+                            resetDownloadButton()
+                            cursor.close()
+                            return
+                        }
+                    }
+
+                    cursor.close()
+
+                    // Continue monitoring
+                    progressHandler.postDelayed(this, 500)
+                }
+            }
+        }
+
+        progressHandler.post(progressRunnable!!)
+    }
+
+    private fun cancelDownload() {
+        val downloadManager = requireContext().getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+        downloadManager.remove(downloadId)
+
+        dismissProgressDialog()
+        resetDownloadButton()
+
+        Toast.makeText(context, "Download cancelled", Toast.LENGTH_SHORT).show()
+        Log.d(TAG, "Download cancelled by user")
+    }
+
+    private fun dismissProgressDialog() {
+        progressRunnable?.let { progressHandler.removeCallbacks(it) }
+        progressDialog?.dismiss()
+        progressDialog = null
+    }
+
+    private fun resetDownloadButton() {
+        binding.apkDownload.isEnabled = true
+        binding.apkDownload.text = "Click Here To Download Latest APK"
+    }
+
     private fun setupDownloadReceiver() {
         downloadReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 val id = intent?.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1) ?: -1
 
                 if (id == downloadId) {
-                    Log.d(TAG, "✅ Download completed for ID: $downloadId (autoUpdate=$isAutoUpdate)")
+                    Log.d(TAG, "✅ Download completed for ID: $downloadId")
 
-                    // Re-enable manual download button if it was used
-                    if (!isAutoUpdate) {
-                        binding.apkDownload.isEnabled = true
-                        binding.apkDownload.text = "Click Here To Download Latest APK"
-                    }
+                    // Dismiss progress dialog
+                    dismissProgressDialog()
+
+                    // Re-enable button
+                    resetDownloadButton()
 
                     Toast.makeText(
                         context,
-                        "✅ Download complete! Installing...",
+                        "✅ APK Downloaded! Installing...",
                         Toast.LENGTH_LONG
                     ).show()
 
+                    // Install APK
                     installAPK()
                 }
             }
         }
 
+        // Register receiver
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requireContext().registerReceiver(
                 downloadReceiver,
@@ -500,7 +464,6 @@ class LoginFragment : Fragment() {
                 Context.RECEIVER_NOT_EXPORTED
             )
         } else {
-            @Suppress("UnspecifiedRegisterReceiverFlag")
             requireContext().registerReceiver(
                 downloadReceiver,
                 IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
@@ -527,6 +490,8 @@ class LoginFragment : Fragment() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 if (!requireContext().packageManager.canRequestPackageInstalls()) {
                     Log.w(TAG, "⚠️ Install permission not granted, requesting...")
+
+                    // Request install permission
                     val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
                         data = Uri.parse("package:${requireContext().packageName}")
                     }
@@ -535,13 +500,16 @@ class LoginFragment : Fragment() {
                 }
             }
 
+            // ✅ Install APK
             val apkUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                // Android 7+ (Use FileProvider)
                 FileProvider.getUriForFile(
                     requireContext(),
                     "${requireContext().packageName}.provider",
                     apkFile
                 )
             } else {
+                // Android 6 and below
                 Uri.fromFile(apkFile)
             }
 
@@ -563,10 +531,6 @@ class LoginFragment : Fragment() {
             ).show()
         }
     }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // ✅ LOGIN LOGIC
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     private fun togglePasswordVisibility() {
         isPasswordVisible = !isPasswordVisible
@@ -815,11 +779,13 @@ class LoginFragment : Fragment() {
         }
     }
 
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
     override fun onDestroyView() {
         super.onDestroyView()
 
+        // Dismiss progress dialog if showing
+        dismissProgressDialog()
+
+        // ✅ Unregister download receiver
         try {
             downloadReceiver?.let {
                 requireContext().unregisterReceiver(it)

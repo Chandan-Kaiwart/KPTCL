@@ -105,7 +105,8 @@ class MainActivity : AppCompatActivity() {
                 R.id.consumptionEntryFragment,
                 R.id.elogEntryFragment,
                 R.id.feederHourlyEntryFragment,
-                R.id.CreateTicketFragment
+                R.id.generalTicketFragment,
+                R.id.stationTicketFragment
             ),
             binding.drawerLayout
         )
@@ -185,22 +186,22 @@ class MainActivity : AppCompatActivity() {
                         })
                 }
                 R.id.createTicket -> {
-                    navController.navigate(R.id.CreateTicketFragment, null,
+                    // ✅ Navigate to GeneralTicketFragment
+                    navController.navigate(R.id.generalTicketFragment, null,
                         navOptions {
                             popUpTo(R.id.homeFragment) {
                                 inclusive = false
                             }
                         })
-
                 }
                 R.id.createStationTicket -> {
-                    navController.navigate(R.id.feederConfirmation, null,
+                    // ✅ Navigate to StationTicketFragment
+                    navController.navigate(R.id.stationTicketFragment, null,
                         navOptions {
                             popUpTo(R.id.homeFragment) {
                                 inclusive = false
                             }
                         })
-
                 }
                 R.id.viewTickets -> {
                     navController.navigate(R.id.viewTicketsFragment, null,
