@@ -220,6 +220,14 @@ class MainActivity : AppCompatActivity() {
                             }
                         })
                 }
+                R.id.status -> {
+                    navController.navigate(R.id.feederstatusFragment, null,
+                        navOptions {
+                            popUpTo(R.id.homeFragment) {
+                                inclusive = false
+                            }
+                        })
+                }
             }
             binding.drawerLayout.closeDrawer(GravityCompat.START)
             true

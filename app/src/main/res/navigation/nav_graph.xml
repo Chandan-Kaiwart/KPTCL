@@ -7,6 +7,25 @@
     app:startDestination="@id/loginFragment">
 
     <fragment
+        android:id="@+id/feederstatusFragment"
+        android:name="com.apc.kptcl.home.users.dashboard.FeederStatusDashboardFragment"
+        android:label="📊 Feeder Status"
+        tools:layout="@layout/fragment_feeder_status_dashboard"
+        >
+        <action
+            android:id="@+id/action_feederstatusFragment_to_stationTicketFragment"
+            app:destination="@id/stationTicketFragment" />
+        <action
+            android:id="@+id/action_feederstatusFragment_to_editMissingDataFragment"
+            app:destination="@id/editMissingDataFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/editMissingDataFragment"
+        android:name="com.apc.kptcl.home.users.dashboard.EditMissingDataFragment"
+        android:label="Edit Missing Data"
+        tools:layout="@layout/fragment_edit_missing_data"
+        />
+    <fragment
         android:id="@+id/loginFragment"
         android:name="com.apc.kptcl.home.LoginFragment"
         android:label="Login"
@@ -154,14 +173,14 @@
     <fragment
         android:id="@+id/generalTicketFragment"
         android:name="com.apc.kptcl.home.users.ticket.GeneralTicketFragment"
-        android:label="Raise Ticket"
+        android:label="Raise General Ticket"
         tools:layout="@layout/fragment_create_ticket"
        />
     <fragment
         android:id="@+id/stationTicketFragment"
         android:name="com.apc.kptcl.home.users.ticket.StationTicketFragment"
-        android:label="Raise Ticket"
-        tools:layout="@layout/fragment_create_ticket"
+        android:label="Raise Station Ticket"
+        tools:layout="@layout/fragment_create_ticket2"
        />
 
     <fragment

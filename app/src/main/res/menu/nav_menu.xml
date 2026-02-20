@@ -76,11 +76,15 @@
         </menu>
     </item>
 
-    <!-- Logout Section (at bottom) -->
     <item
         android:id="@+id/excel"
         android:icon="@drawable/ic_upload"
         android:title="UPLOAD/DOWNLOAD EXCEL"
         app:iconTint="@color/logout_icon_tint" />
 
+    <item
+        android:id="@+id/status"
+        android:icon="@drawable/ic_upload"
+        android:title="STATUS REPORT"
+        app:iconTint="@color/logout_icon_tint" />
 </menu>

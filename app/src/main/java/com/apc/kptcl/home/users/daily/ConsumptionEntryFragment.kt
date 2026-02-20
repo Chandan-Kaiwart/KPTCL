@@ -58,9 +58,9 @@ class ConsumptionEntryFragment : Fragment() {
 
     companion object {
         private const val TAG = "ConsumptionEntry"
-        private const val FEEDER_LIST_URL = "http://62.72.59.119:8008/api/feeder/list"
-        private const val CONSUMPTION_URL = "http://62.72.59.119:8008/api/feeder/consumption"
-        private const val SAVE_URL = "http://62.72.59.119:8008/api/feeder/consumption/save"
+        private const val FEEDER_LIST_URL = "http://62.72.59.119:9009/api/feeder/list"
+        private const val CONSUMPTION_URL = "http://62.72.59.119:9009/api/feeder/consumption"
+        private const val SAVE_URL = "http://62.72.59.119:9009/api/feeder/consumption/save"
         private const val TIMEOUT = 15000
     }
 

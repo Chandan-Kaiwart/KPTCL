@@ -42,7 +42,7 @@
                         android:id="@+id/tvTitle"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="FEEDER DATA ENTRY FOR 33/11 KV"
+                        android:text="FEEDER DATA ENTRY PLATFORM"
                         android:textAlignment="center"
                         android:textColor="@color/text_primary"
                         android:textSize="18sp"

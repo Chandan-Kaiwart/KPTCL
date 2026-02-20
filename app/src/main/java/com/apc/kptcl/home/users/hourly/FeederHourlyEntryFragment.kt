@@ -1,6 +1,7 @@
 package com.apc.kptcl.home.users.hourly
 
 import android.app.DatePickerDialog
+import android.graphics.Color
 import android.os.Bundle
 import android.text.Editable
 import android.text.InputFilter
@@ -58,9 +59,9 @@ class FeederHourlyEntryFragment : Fragment() {
 
     companion object {
         private const val TAG = "HourlyEntry"
-        private const val FEEDER_LIST_URL = "http://62.72.59.119:8008/api/feeder/list"
-        private const val FETCH_URL = "http://62.72.59.119:8008/api/feeder/hourly"
-        private const val SAVE_URL = "http://62.72.59.119:8008/api/feeder/hourly-entry/save"
+        private const val FEEDER_LIST_URL = "http://62.72.59.119:9009/api/feeder/list"
+        private const val FETCH_URL = "http://62.72.59.119:9009/api/feeder/hourly"
+        private const val SAVE_URL = "http://62.72.59.119:9009/api/feeder/hourly-entry/save"
         private const val TIMEOUT = 15000
     }
 
@@ -329,23 +330,29 @@ class FeederHourlyEntryFragment : Fragment() {
                         }
                     }
 
+                    // Compute max allowed hour for this date
+                    val maxAllowedHour = computeMaxAllowedHour(date)
+
                     // Create rows for all 24 hours (00-23)
                     for (hour in 0..23) {
                         val hourKey = String.format("%02d", hour)
                         rowList.add(
                             HourlyDataRow(
                                 hour = hourKey,
-                                parameters = hourMap[hourKey] ?: mutableMapOf()
+                                parameters = hourMap[hourKey] ?: mutableMapOf(),
+                                isLocked = hour > maxAllowedHour
                             )
                         )
                     }
                 } else {
                     // New mode - empty rows
+                    val maxAllowedHour = computeMaxAllowedHour(date)
                     for (hour in 0..23) {
                         rowList.add(
                             HourlyDataRow(
                                 hour = String.format("%02d", hour),
-                                parameters = mutableMapOf()
+                                parameters = mutableMapOf(),
+                                isLocked = hour > maxAllowedHour
                             )
                         )
                     }
@@ -501,7 +508,7 @@ class FeederHourlyEntryFragment : Fragment() {
             val rowsArray = JSONArray()
             for (parameter in parameters) {
                 val hoursObject = JSONObject()
-                for (row in rows) {
+                for (row in rows.filter { !it.isLocked }) {
                     val value = row.parameters[parameter] ?: ""
                     if (value.isNotEmpty() && value != "null") {
                         hoursObject.put(row.hour, value)
@@ -547,6 +554,22 @@ class FeederHourlyEntryFragment : Fragment() {
         binding.btnSubmit.text = if (show) "Submitting..." else "SUBMIT"
     }
 
+    /**
+     * Past date  → maxAllowedHour = 23  (sab 24 hours editable)
+     * Aaj ki date → maxAllowedHour = currentHour - 1
+     *   e.g. abhi 15:30 baj rahe → hours 00-14 editable, 15-23 locked
+     *   abhi 00:xx baj rahe    → maxAllowedHour = -1 → sab locked
+     */
+    private fun computeMaxAllowedHour(dateStr: String): Int {
+        val today = dateFormat.format(Calendar.getInstance().time)
+        return if (dateStr < today) {
+            23  // Past date: sab allowed
+        } else {
+            // Aaj ya future (shouldn't be future due to date picker restriction)
+            Calendar.getInstance().get(Calendar.HOUR_OF_DAY) - 1
+        }
+    }
+
     private fun showError(message: String) {
         AlertDialog.Builder(requireContext())
             .setTitle("Error")
@@ -575,7 +598,8 @@ data class FeederData(
 
 data class HourlyDataRow(
     val hour: String,  // "00" to "23" - database format
-    val parameters: MutableMap<String, String>
+    val parameters: MutableMap<String, String>,
+    val isLocked: Boolean = false  // true = future/current hour, entry not allowed
 )
 
 data class ExistingHourlyData(
@@ -661,13 +685,16 @@ class HourlyDataAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     class HeaderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
 
     // Data ViewHolder
+    // XML: item_feeder_hourly_row.xml
+    // IDs: tvHour, etIR, etIY, etIB, etMW, etMVAR
+    // Drawables: cell_border (tvHour), table_cell_border_editable (EditTexts)
     class DataViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
 
         private val tvHour: TextView = itemView.findViewById(R.id.tvHour)
-        private val etIB: EditText = itemView.findViewById(R.id.etIB)
-        private val etIR: EditText = itemView.findViewById(R.id.etIR)
-        private val etIY: EditText = itemView.findViewById(R.id.etIY)
-        private val etMW: EditText = itemView.findViewById(R.id.etMW)
+        private val etIR:   EditText = itemView.findViewById(R.id.etIR)
+        private val etIY:   EditText = itemView.findViewById(R.id.etIY)
+        private val etIB:   EditText = itemView.findViewById(R.id.etIB)
+        private val etMW:   EditText = itemView.findViewById(R.id.etMW)
         private val etMVAR: EditText = itemView.findViewById(R.id.etMVAR)
 
         private lateinit var currentRow: HourlyDataRow
@@ -679,48 +706,72 @@ class HourlyDataAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
             val displayHour = dbHourInt + 1
             tvHour.text = "$displayHour:00"
 
-            setupParameterInput(etIB, "IB")
-            setupParameterInput(etIR, "IR")
-            setupParameterInput(etIY, "IY")
-            setupParameterInput(etMW, "MW")
-            setupParameterInput(etMVAR, "MVAR")
+            if (row.isLocked) {
+                // ── LOCKED: future / current hour — grey, not editable ──
+                itemView.setBackgroundColor(Color.parseColor("#F0F0F0"))
+                tvHour.setTextColor(Color.parseColor("#AAAAAA"))
+                tvHour.setBackgroundColor(Color.parseColor("#E8E8E8"))
+
+                listOf(etIR, etIY, etIB, etMW, etMVAR).forEach { et ->
+                    (et.tag as? TextWatcher)?.let { et.removeTextChangedListener(it) }
+                    et.setText("")
+                    et.hint = "—"
+                    et.isEnabled = false
+                    et.isFocusable = false
+                    et.setBackgroundColor(Color.parseColor("#E8E8E8"))
+                    et.setTextColor(Color.parseColor("#AAAAAA"))
+                    et.setHintTextColor(Color.parseColor("#BBBBBB"))
+                }
+            } else {
+                // ── EDITABLE: original XML drawables restore karo ──
+                itemView.setBackgroundColor(Color.TRANSPARENT)
+                tvHour.setTextColor(Color.BLACK)
+                tvHour.setBackgroundResource(R.drawable.cell_border)
+
+                listOf(etIR, etIY, etIB, etMW, etMVAR).forEach { et ->
+                    et.isEnabled = true
+                    et.isFocusableInTouchMode = true
+                    et.setTextColor(Color.BLACK)
+                    et.setHintTextColor(Color.parseColor("#999999"))
+                    et.setBackgroundResource(R.drawable.table_cell_border_editable)
+                }
+
+                // Parameter binding — XML ke IDs ke mutabiq
+                setupParameterInput(etIR,   "IR")
+                setupParameterInput(etIY,   "IY")
+                setupParameterInput(etIB,   "IB")
+                setupParameterInput(etMW,   "MW")
+                setupParameterInput(etMVAR, "MVAR")
+            }
         }
 
-
         private fun setupParameterInput(editText: EditText, parameterName: String) {
-            editText.tag?.let { oldWatcher ->
-                if (oldWatcher is TextWatcher) {
-                    editText.removeTextChangedListener(oldWatcher)
-                }
-            }
+            // Old watcher hata do pehle
+            (editText.tag as? TextWatcher)?.let { editText.removeTextChangedListener(it) }
 
-            // ✅ Different input types for different parameters
+            // Input type + filters — parameter ke hisaab se
             when (parameterName) {
                 "IB", "IR", "IY" -> {
-                    // Integer only, no decimals, no negative
                     editText.inputType = android.text.InputType.TYPE_CLASS_NUMBER
-                    editText.filters = arrayOf(IntegerInputFilter(allowNegative = false))
-                    editText.hint = "Integer only"
+                    editText.filters   = arrayOf(IntegerInputFilter(allowNegative = false))
                 }
                 "MW" -> {
-                    // Decimal allowed (8 places), no negative
                     editText.inputType = android.text.InputType.TYPE_CLASS_NUMBER or
                             android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
-                    editText.filters = arrayOf(DecimalInputFilter(allowNegative = false, maxDecimalPlaces = 8))
-                    editText.hint = "e.g., 12.12345678"
+                    editText.filters   = arrayOf(DecimalInputFilter(allowNegative = false, maxDecimalPlaces = 8))
                 }
                 "MVAR" -> {
-                    // Decimal allowed (8 places), negative allowed
                     editText.inputType = android.text.InputType.TYPE_CLASS_NUMBER or
                             android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL or
                             android.text.InputType.TYPE_NUMBER_FLAG_SIGNED
-                    editText.filters = arrayOf(DecimalInputFilter(allowNegative = true, maxDecimalPlaces = 8))
-                    editText.hint = "Can be ± decimal"
+                    editText.filters   = arrayOf(DecimalInputFilter(allowNegative = true, maxDecimalPlaces = 8))
                 }
             }
 
+            // Existing value set karo (hint XML se aata hai, override mat karo)
             editText.setText(currentRow.parameters[parameterName] ?: "")
 
+            // TextWatcher — data capture
             val watcher = object : TextWatcher {
                 override fun afterTextChanged(s: Editable?) {
                     currentRow.parameters[parameterName] = s.toString()
