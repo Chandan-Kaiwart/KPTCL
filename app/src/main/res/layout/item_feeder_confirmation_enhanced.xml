@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="4dp"
+    app:strokeWidth="1dp"
+    app:strokeColor="#CCCCCC">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Feeder Name -->
+        <TextView
+            android:id="@+id/tvFeederName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="F-1 Sirasagi Maddi"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#1976D2"
+            android:layout_marginBottom="4dp" />
+
+        <!-- Feeder Code -->
+        <TextView
+            android:id="@+id/tvFeederCode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Code: F001"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="2dp" />
+
+        <!-- Feeder Category -->
+        <TextView
+            android:id="@+id/tvFeederCategory"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Category: 11KV"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#E0E0E0"
+            android:layout_marginBottom="12dp" />
+
+        <!-- STATE 1: Ticket Rejected (show this) -->
+        <TextView
+            android:id="@+id/tvTicketRejected"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="⚠ Ticket Rejected"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="#D32F2F"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone" />
+
+        <!-- STATE 2: Ticket Raised (show this) -->
+        <TextView
+            android:id="@+id/tvTicketRaisedStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="❌ No\nTicket Raised: 14-01-26 2:30 PM"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="#D32F2F"
+            android:visibility="gone" />
+
+        <!-- STATE 3: Already Confirmed (show this) -->
+        <TextView
+            android:id="@+id/tvConfirmedStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="✅ Yes"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#4CAF50"
+            android:visibility="gone" />
+
+        <!-- STATE 4: Radio Buttons (show this for first time or rejected) -->
+        <RadioGroup
+            android:id="@+id/rgConfirmation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:visibility="visible">
+
+            <RadioButton
+                android:id="@+id/rbYes"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Yes"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <RadioButton
+                android:id="@+id/rbNo"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="No"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+        </RadioGroup>
+
+        <!-- Raise Ticket Button (shown when "No" is selected) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRaiseTicket"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Raise Ticket"
+            android:textSize="14sp"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="#D32F2F"
+            app:cornerRadius="6dp"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

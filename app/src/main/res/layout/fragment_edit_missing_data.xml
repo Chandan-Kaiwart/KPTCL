@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+xmlns:app="http://schemas.android.com/apk/res-auto"
+android:layout_width="match_parent"
+android:layout_height="match_parent"
+android:orientation="vertical"
+android:background="#F5F5F5">
+
+<!-- Header -->
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#B71C1C"
+    android:padding="12dp"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/tvEditDate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@android:color/white"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:text="Editing: " />
+
+    <TextView
+        android:id="@+id/tvMissingSummary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#FFCDD2"
+        android:textSize="12sp"
+        android:paddingTop="4dp" />
+</LinearLayout>
+
+<ProgressBar
+    android:id="@+id/progressBar"
+    android:layout_width="match_parent"
+    android:layout_height="4dp"
+    android:indeterminate="true"
+    android:visibility="gone"
+    style="?android:attr/progressBarStyleHorizontal" />
+
+<!-- Submit All button at top for convenience -->
+<Button
+    android:id="@+id/btnSubmitAll"
+    android:layout_width="match_parent"
+    android:layout_height="48dp"
+    android:text="💾 SAVE ALL DATA"
+    android:backgroundTint="#2E7D32"
+    android:visibility="gone"
+    android:textColor="@android:color/white"
+    android:layout_margin="8dp"
+    />
+
+<androidx.core.widget.NestedScrollView
+    android:id="@+id/nestedScrollView"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <!-- HOURLY SECTION -->
+        <TextView
+            android:id="@+id/tvHourlyTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="⚡ HOURLY DATA"
+            android:textStyle="bold"
+            android:textSize="15sp"
+            android:textColor="#1565C0"
+            android:paddingBottom="8dp" />
+
+        <!-- Feeder tabs (horizontal scroll) -->
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="8dp">
+
+            <LinearLayout
+                android:id="@+id/feederTabLayout"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+
+        <!-- Hourly column headers -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:background="#E3F2FD"
+            android:padding="4dp">
+
+            <TextView android:layout_width="40dp" android:layout_height="wrap_content"
+                android:text="Hr" android:textStyle="bold" android:textSize="11sp" android:gravity="center"/>
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:text="IB" android:textStyle="bold"
+                android:textSize="11sp" android:gravity="center"/>
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:text="IR" android:textStyle="bold"
+                android:textSize="11sp" android:gravity="center"/>
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:text="IY" android:textStyle="bold"
+                android:textSize="11sp" android:gravity="center"/>
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:text="MW" android:textStyle="bold"
+                android:textSize="11sp" android:gravity="center"/>
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:text="MVAR" android:textStyle="bold"
+                android:textSize="11sp" android:gravity="center"/>
+        </LinearLayout>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvHourlyData"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:nestedScrollingEnabled="false" />
+
+        <Button
+            android:id="@+id/btnSubmitHourly"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="⚡ SAVE HOURLY DATA"
+            android:backgroundTint="#1565C0"
+            android:textColor="@android:color/white"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- DIVIDER -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#BDBDBD"
+            android:layout_marginVertical="8dp" />
+
+        <!-- DAILY SECTION -->
+        <TextView
+            android:id="@+id/tvDailyTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="📊 DAILY CONSUMPTION DATA"
+            android:textStyle="bold"
+            android:textSize="15sp"
+            android:textColor="#1565C0"
+            android:paddingBottom="8dp" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvDailyData"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:nestedScrollingEnabled="false" />
+
+        <Button
+            android:id="@+id/btnSubmitDaily"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="📊 SAVE DAILY DATA"
+            android:backgroundTint="#6A1B9A"
+            android:textColor="@android:color/white"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="32dp" />
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>
+</LinearLayout>

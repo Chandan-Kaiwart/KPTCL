@@ -106,7 +106,15 @@ class MainActivity : AppCompatActivity() {
                 R.id.elogEntryFragment,
                 R.id.feederHourlyEntryFragment,
                 R.id.generalTicketFragment,
-                R.id.stationTicketFragment
+                R.id.stationTicketFragment,
+                R.id.CreateTicketFragment,
+                R.id.feederEditFragment,
+                R.id.dailyParameterEntryFragment,
+                R.id.feederstatusFragment,
+                R.id.excelDownload,
+                R.id.reportFragment,
+                R.id.feederConfirmation,
+                R.id.editMissingDataFragment
             ),
             binding.drawerLayout
         )
@@ -311,13 +319,24 @@ class MainActivity : AppCompatActivity() {
                         finish()
                     }
                     else -> {
-                        // For any other fragment, navigate to home
-                        navController.navigate(R.id.homeFragment, null,
-                            navOptions {
-                                popUpTo(R.id.homeFragment) {
-                                    inclusive = true
-                                }
-                            })
+                        when (navController.currentDestination?.id) {
+                            R.id.editMissingDataFragment -> {
+                                navController.navigate(R.id.feederstatusFragment, null,
+                                    navOptions {
+                                        popUpTo(R.id.feederstatusFragment) {
+                                            inclusive = true
+                                        }
+                                    })
+                            }
+                            else -> {
+                                navController.navigate(R.id.homeFragment, null,
+                                    navOptions {
+                                        popUpTo(R.id.homeFragment) {
+                                            inclusive = true
+                                        }
+                                    })
+                            }
+                        }
                     }
                 }
             }

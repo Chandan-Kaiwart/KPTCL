@@ -32,6 +32,13 @@ interface ExceptionalReportApiService {
         @Query("feeder_code") feederCode: String? = null,
         @Query("missing_date") missingDate: String? = null
     ): Response<ExceptionalReportResponse>
+
+    @GET("api/dcc/validator/summary")
+    suspend fun getValidatorSummary(
+        @Header("Authorization") token: String,
+        @Query("date") date: String
+    ): Response<ExceptionalReportResponse>  // same response class as before
+
 }
 
 /**
@@ -56,5 +63,7 @@ data class ExceptionalReportItem(
     val DATE: String,
     val MISSINGDATE: String?,
     val MISSINGHOUR: String?,
-    val MISSINGPARAMETERINEACHHOUR: String?
+    val MISSINGPARAMETERINEACHHOUR: String?,
+    val HOURLY_STATUS: String = "",
+    val DAILY_STATUS: String = ""
 )

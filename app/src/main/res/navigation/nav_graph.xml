@@ -9,7 +9,7 @@
     <fragment
         android:id="@+id/feederstatusFragment"
         android:name="com.apc.kptcl.home.users.dashboard.FeederStatusDashboardFragment"
-        android:label="📊 Feeder Status"
+        android:label="📊 Feeder Status Dashboard"
         tools:layout="@layout/fragment_feeder_status_dashboard"
         >
         <action

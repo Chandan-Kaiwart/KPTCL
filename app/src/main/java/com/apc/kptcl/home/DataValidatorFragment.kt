@@ -234,7 +234,8 @@ class DataValidatorFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val token = SessionManager.getToken(requireContext())
-                val response = apiService.getReportsByDate("Bearer $token", selectedDate)
+                val todayDate = apiDateFormat.format(calendar.time)
+                val response = apiService.getValidatorSummary("Bearer $token", todayDate)
 
                 if (response.isSuccessful && response.body() != null) {
                     val apiResponse = response.body()!!
@@ -280,7 +281,9 @@ class DataValidatorFragment : Fragment() {
 
                 Log.d(TAG, "Calling API with token: ${token.take(50)}...")
 
-                val response = apiService.getAllReports("Bearer $token")
+                // ✅ replace lines 284-301 with this
+                val todayDate = apiDateFormat.format(calendar.time)
+                val response = apiService.getValidatorSummary("Bearer $token", todayDate)
 
                 Log.d(TAG, "Response code: ${response.code()}")
 
@@ -295,7 +298,7 @@ class DataValidatorFragment : Fragment() {
 
                         Toast.makeText(
                             context,
-                            "✅ Loaded ${apiResponse.count} exceptional reports",
+                            "✅ Loaded ${apiResponse.count} records",
                             Toast.LENGTH_SHORT
                         ).show()
                     } else {
@@ -328,18 +331,21 @@ class DataValidatorFragment : Fragment() {
         val stations = mutableListOf<StationValidatorItem>()
 
         stationMap.forEach { (stationName, reports) ->
-            // Separate reports by table type
-            val hourlyReports = reports.filter { it.TABLENAME.contains("hourly", ignoreCase = true) }
-            val consumptionReports = reports.filter { it.TABLENAME.contains("consumption", ignoreCase = true) }
+            val item = reports.first()
 
-            // Calculate status for each table
-            val hourlyStatus = calculateTableStatus(hourlyReports)
-            val consumptionStatus = calculateTableStatus(consumptionReports)
-
-            // Overall station status
+            val hourlyStatus = when (item.HOURLY_STATUS.uppercase()) {
+                "FILLED" -> "FULL"
+                "MISSING" -> "NOT STARTED"
+                else -> "PARTIAL"
+            }
+            val consumptionStatus = when (item.DAILY_STATUS.uppercase()) {
+                "FILLED" -> "FULL"
+                "MISSING" -> "NOT STARTED"
+                else -> "PARTIAL"
+            }
             val overallStatus = when {
-                hourlyStatus == "FULL" && consumptionStatus == "FULL" -> "FILLED COMPLETELY"
-                hourlyStatus == "NOT STARTED" && consumptionStatus == "NOT STARTED" -> "NOT STARTED YET"
+                item.HOURLY_STATUS == "FILLED" && item.DAILY_STATUS == "FILLED" -> "FILLED COMPLETELY"
+                item.HOURLY_STATUS == "MISSING" && item.DAILY_STATUS == "MISSING" -> "NOT STARTED YET"
                 else -> "PARTIALLY FILLED"
             }
 

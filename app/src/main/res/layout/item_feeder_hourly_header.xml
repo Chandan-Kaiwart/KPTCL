@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="2dp"
+    android:background="#FFFFFF">
+
+    <!-- HOUR Heading -->
+    <TextView
+        android:layout_width="80dp"
+        android:layout_height="50dp"
+        android:gravity="center"
+        android:text="HOUR"
+        android:textColor="@color/black"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:background="@color/white"/>
+
+    <!-- IR Heading -->
+    <TextView
+        android:layout_width="65dp"
+        android:layout_height="50dp"
+        android:gravity="center"
+        android:text="IR"
+        android:textColor="@color/black"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:background="@color/white" />
+
+    <!-- IY Heading -->
+    <TextView
+        android:layout_width="65dp"
+        android:layout_height="50dp"
+        android:gravity="center"
+        android:text="IY"
+        android:textColor="@color/black"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:background="@color/white" />
+
+    <!-- IB Heading -->
+    <TextView
+        android:layout_width="65dp"
+        android:layout_height="50dp"
+        android:gravity="center"
+        android:text="IB"
+        android:textColor="@color/black"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:background="@color/white"/>
+
+    <!-- MW Heading -->
+    <TextView
+        android:layout_width="65dp"
+        android:layout_height="50dp"
+        android:gravity="center"
+        android:text="MW"
+        android:textColor="@color/black"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:background="@color/white" />
+
+    <!-- MVAR Heading -->
+    <TextView
+        android:layout_width="65dp"
+        android:layout_height="50dp"
+        android:gravity="center"
+        android:text="MVAR"
+        android:textColor="@color/black"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:background="@color/white"/>
+
+</LinearLayout>
