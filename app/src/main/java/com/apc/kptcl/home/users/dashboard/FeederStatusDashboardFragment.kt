@@ -114,8 +114,9 @@ class FeederStatusDashboardFragment : Fragment() {
 
         setupCalendar()
         setupMonthNavigation()
+        setupRefreshButton()  // ← FAB setup
 
-// Cache check — agar same month ka data hai toh load mat karo
+        // Cache check — agar same month ka data hai toh load mat karo
         if (viewModel.isCacheValid(currentCalendar)) {
             allFeeders = viewModel.allFeeders
             dayStatusMap.putAll(viewModel.dayStatusMap)
@@ -131,15 +132,12 @@ class FeederStatusDashboardFragment : Fragment() {
     // ============================================================
 
     private fun getStationNameFromSession(): String {
-        // Pehle SessionManager se try karo
         val saved = SessionManager.getStationName(requireContext())
         if (saved.isNotEmpty()) return saved
 
-        // Fallback: JWT token ka payload manually decode karo
         return try {
             val token = SessionManager.getToken(requireContext())
             val payload = token.split(".")[1]
-            // Base64 URL decode
             val decoded = android.util.Base64.decode(
                 payload.replace('-', '+').replace('_', '/'),
                 android.util.Base64.NO_WRAP or android.util.Base64.NO_PADDING
@@ -187,6 +185,35 @@ class FeederStatusDashboardFragment : Fragment() {
                 currentCalendar.add(Calendar.MONTH, 1)
                 updateMonthTitle()
                 loadMonthStatus()
+            }
+        }
+    }
+
+    // ============================================================
+    // FLOATING REFRESH BUTTON
+    // ============================================================
+
+    private fun setupRefreshButton() {
+        binding.fabRefresh.setOnClickListener {
+            val monthLabel = displayMonthFormat.format(currentCalendar.time)
+
+            // Sirf current month ka cache invalidate karo, baaki months safe rahenge
+            viewModel.invalidateMonth(currentCalendar)
+
+            // Local maps bhi clear karo — stale data na dikhe
+            dayStatusMap.clear()
+
+            Snackbar.make(
+                binding.root,
+                "Refreshing $monthLabel...",
+                Snackbar.LENGTH_SHORT
+            ).show()
+
+            // Feeder list already available hai toh seedha month status fetch karo
+            if (allFeeders.isNotEmpty()) {
+                loadMonthStatus()
+            } else {
+                fetchFeederListThenStatus()
             }
         }
     }
@@ -249,7 +276,7 @@ class FeederStatusDashboardFragment : Fragment() {
                 dayStatusMap.clear()
                 dayStatusMap.putAll(newStatusMap)
 
-// Cache save karo
+                // Cache save karo
                 viewModel.saveCache(allFeeders, dayStatusMap, currentCalendar)
 
                 updateCalendarUI()
@@ -358,7 +385,6 @@ class FeederStatusDashboardFragment : Fragment() {
                 val json = JSONObject(BufferedReader(InputStreamReader(connection.inputStream)).readText())
                 val data = json.optJSONArray("data") ?: return false
                 if (data.length() == 0) return false
-                // Row exists in DB = feeder is filled. 0/00:00/PROPER are valid saved values.
                 data.length() > 0
             } else false
         } catch (e: Exception) { false }
@@ -417,11 +443,11 @@ class FeederStatusDashboardFragment : Fragment() {
         countMissing = dayStatusMap.values.count { it.status == DayStatus.MISSING }
 
         binding.tvLegendFull.text    = "✅ Fully Filled: $countFull"
-        binding.tvLegendPartial.text = "⚠️ Partial: $countPartial"
+        // Point 5: Partial is now red — data not completely filled
+        binding.tvLegendPartial.text = "🔴 Partial (Incomplete): $countPartial"
         binding.tvLegendMissing.text = "❌ Missing: $countMissing"
     }
 
-    // CHANGE: finalLevel removed, sirf hourly + daily
     private fun updateTrendChart() {
         val sorted = dayStatusMap.entries
             .filter { it.value.status != DayStatus.FUTURE }
@@ -443,7 +469,6 @@ class FeederStatusDashboardFragment : Fragment() {
                 info.filledDaily > 0     -> 1f
                 else                     -> 0f
             }
-            // CHANGE: finalLevel removed
             TrendDataPoint(dayNum, hourlyLevel, dailyLevel)
         }
 
@@ -561,7 +586,8 @@ class CalendarDayAdapter(
 
             val (bgColor, statusText, textColor) = when (info.status) {
                 DayStatus.FULLY_FILLED -> Triple(Color.parseColor("#4CAF50"), "✅", Color.BLACK)
-                DayStatus.PARTIAL      -> Triple(Color.parseColor("#FFC107"), "⚠️", Color.BLACK)
+                // Point 5: PARTIAL also shown in red — feeder data not fully filled
+                DayStatus.PARTIAL      -> Triple(Color.parseColor("#F44336"), "⚠️", Color.WHITE)
                 DayStatus.MISSING      -> Triple(Color.parseColor("#F44336"), "❌", Color.BLACK)
                 DayStatus.FUTURE       -> Triple(Color.parseColor("#E0E0E0"), "",   Color.parseColor("#9E9E9E"))
                 DayStatus.NO_DATA      -> Triple(Color.parseColor("#BDBDBD"), "?",  Color.BLACK)
@@ -581,21 +607,16 @@ class CalendarDayAdapter(
 
 // ============================================================
 // TREND CHART DATA MODEL
-// CHANGE: finalLevel field removed
 // ============================================================
 
 data class TrendDataPoint(
     val day: Int,
-    val hourlyLevel: Float,   // 0=Missing, 1=Partial, 2=Full
+    val hourlyLevel: Float,
     val dailyLevel: Float
-    // finalLevel REMOVED
 )
 
 // ============================================================
 // LINE TREND CHART — Custom View
-// CHANGE 1: Hourly color → Pink (#E91E8C)
-// CHANGE 2: Final line + dots + legend entry removed
-// Only 2 lines: Pink = Hourly, Orange = Daily
 // ============================================================
 
 class LineTrendChartView @JvmOverloads constructor(
@@ -612,14 +633,13 @@ class LineTrendChartView @JvmOverloads constructor(
         invalidate()
     }
 
-    private val padL = 150f   // Increased: Y-axis labels ko right shift kiya
+    private val padL = 150f
     private val padR = 30f
     private val padT = 100f
     private val padB = 60f
 
-    // CHANGE: Hourly → Pink, Daily → Orange (Final removed)
-    private val paintHourly = linePaint("#E91E8C")   // Pink
-    private val paintDaily  = linePaint("#1565C0")   // Orange
+    private val paintHourly = linePaint("#E91E8C")
+    private val paintDaily  = linePaint("#1565C0")
 
     private fun linePaint(hex: String) = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor(hex)
@@ -676,7 +696,6 @@ class LineTrendChartView @JvmOverloads constructor(
             if (n <= 1) padL + chartW / 2f
             else padL + (i.toFloat() / (n - 1)) * chartW
 
-        // Grid + Y labels
         listOf(
             "FULL"      to yFull,
             "PARTIAL"   to yPartial,
@@ -684,14 +703,12 @@ class LineTrendChartView @JvmOverloads constructor(
         ).forEach { (label, y) ->
             canvas.drawLine(padL, y, w - padR, y, gridPaint)
             canvas.drawLine(padL - 6f, y, padL, y, axisPaint)
-            canvas.drawText(label, padL / 2f, y + 9f, yLabelPaint)  // Centered in left padding
+            canvas.drawText(label, padL / 2f, y + 9f, yLabelPaint)
         }
 
-        // Axes
         canvas.drawLine(padL, padT, padL, padT + chartH, axisPaint)
         canvas.drawLine(padL, padT + chartH, w - padR, padT + chartH, axisPaint)
 
-        // Draw line helper
         fun drawLine(paint: Paint, getValue: (TrendDataPoint) -> Float) {
             if (dataPoints.size < 2) return
             val path = Path()
@@ -703,17 +720,14 @@ class LineTrendChartView @JvmOverloads constructor(
             canvas.drawPath(path, paint)
         }
 
-        // CHANGE: Only Hourly (Pink) + Daily (Orange) — Final removed
         drawLine(paintHourly) { it.hourlyLevel }
         drawLine(paintDaily)  { it.dailyLevel }
 
-        // Dots — only 2 series now
         dataPoints.forEachIndexed { i, pt ->
             val x = dayToX(i)
             listOf(
-                Color.parseColor("#E91E8C") to pt.hourlyLevel,   // Pink
-                Color.parseColor("#1565C0") to pt.dailyLevel     // Orange
-                // Final removed
+                Color.parseColor("#E91E8C") to pt.hourlyLevel,
+                Color.parseColor("#1565C0") to pt.dailyLevel
             ).forEach { (color, level) ->
                 dotPaint.color = color
                 canvas.drawCircle(x, statusToY(level), 7f, dotPaint)
@@ -722,27 +736,23 @@ class LineTrendChartView @JvmOverloads constructor(
             }
         }
 
-        // X labels
         dataPoints.forEachIndexed { i, pt ->
             if (i % 3 == 0 || i == dataPoints.lastIndex) {
                 canvas.drawText(pt.day.toString(), dayToX(i), padT + chartH + 40f, xLabelPaint)
             }
         }
 
-        // Title — Dynamic Station Name
         canvas.drawText(stationName, padL + chartW / 2f, 32f, titlePaint)
 
-        // Legend — Left aligned from chart start, 2 items centered
         val legendColors = listOf(
-            "#E91E8C" to "Hourly Status",   // Pink
-            "#1565C0" to "Daily Status"     // Blue
+            "#E91E8C" to "Hourly Status",
+            "#1565C0" to "Daily Status"
         )
         val legendPaintLine = Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeWidth = 4f; style = Paint.Style.STROKE }
         val legendTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 22f; textAlign = Paint.Align.LEFT }
 
-        // Center 2 legends within chart area
         val totalLegendWidth = 2 * 170f
-        var lx = padL + (chartW - totalLegendWidth) / 2f   // Centered in chart area
+        var lx = padL + (chartW - totalLegendWidth) / 2f
         val ly = padT - 52f
 
         legendColors.forEach { (hex, label) ->

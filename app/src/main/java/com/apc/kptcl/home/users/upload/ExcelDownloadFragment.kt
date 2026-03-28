@@ -1,5 +1,7 @@
 package com.apc.kptcl.home.users.upload
 
+import ExcelUploadHandler
+import UploadResult
 import android.Manifest
 import android.app.DatePickerDialog
 import android.content.Intent
@@ -126,9 +128,8 @@ class ExcelDownloadFragment : Fragment() {
             calendar.get(Calendar.DAY_OF_MONTH)
         )
 
-        val yesterdayCalendar = Calendar.getInstance()
-        yesterdayCalendar.add(Calendar.DAY_OF_YEAR, -1)
-        datePickerDialog.datePicker.maxDate = yesterdayCalendar.timeInMillis
+        // Allow today — hourly upload up to current hour is valid
+        datePickerDialog.datePicker.maxDate = Calendar.getInstance().timeInMillis
 
         datePickerDialog.show()
     }
@@ -201,8 +202,8 @@ class ExcelDownloadFragment : Fragment() {
         }
     }
 
-    // ✅ NEW: Handle selected Excel file
-    private fun handleSelectedFile(uri: Uri) {
+    // Handle selected Excel file — with autofill dialog support
+    private fun handleSelectedFile(uri: Uri, autofillApproved: Boolean = false) {
         binding.btnUpload.isEnabled = false
         binding.btnUpload.text = "Processing..."
         binding.progressBar.visibility = View.VISIBLE
@@ -210,11 +211,39 @@ class ExcelDownloadFragment : Fragment() {
         lifecycleScope.launch {
             try {
                 val result = withContext(Dispatchers.IO) {
-                    excelUploadHandler.validateAndUpload(uri, selectedDate)
+                    excelUploadHandler.validateAndUpload(uri, selectedDate, autofillApproved)
                 }
 
                 if (result.isSuccess) {
-                    showSuccessDialog(result.getOrNull()!!)
+                    val uploadResult = result.getOrNull()!!
+
+                    if (uploadResult.needsAutofill) {
+                        // Reset buttons before showing dialog
+                        binding.btnUpload.isEnabled = true
+                        binding.btnUpload.text = "Upload Excel"
+                        binding.progressBar.visibility = View.GONE
+
+                        val emptyCount = uploadResult.emptyCellCount
+                        AlertDialog.Builder(requireContext())
+                            .setTitle("⚠️ Incomplete Data")
+                            .setMessage(
+                                "There are $emptyCount empty cells.\n\n" +
+                                        "Do you want to auto-fill all empty cells with 0?\n\n" +
+                                        "• YES — Empty cells will be filled with 0, then uploaded.\n\n" +
+                                        "• NO  — Cancel and fill manually in Excel."
+                            )
+                            .setPositiveButton("Yes, Autofill with 0") { _, _ ->
+                                handleSelectedFile(uri, autofillApproved = true)
+                            }
+                            .setNegativeButton("No, Fill Manually") { dialog, _ ->
+                                dialog.dismiss()
+                            }
+                            .setCancelable(false)
+                            .show()
+                        return@launch
+                    }
+
+                    showSuccessDialog(uploadResult)
                 } else {
                     showError(result.exceptionOrNull()?.message ?: "Upload failed. Please try again.")
                 }
@@ -223,9 +252,11 @@ class ExcelDownloadFragment : Fragment() {
                 e.printStackTrace()
                 showError(ApiErrorHandler.handle(e))
             } finally {
-                binding.btnUpload.isEnabled = true
-                binding.btnUpload.text = "Upload Excel"
-                binding.progressBar.visibility = View.GONE
+                if (binding.btnUpload.text == "Processing...") {
+                    binding.btnUpload.isEnabled = true
+                    binding.btnUpload.text = "Upload Excel"
+                    binding.progressBar.visibility = View.GONE
+                }
             }
         }
     }
@@ -308,20 +339,25 @@ class ExcelDownloadFragment : Fragment() {
             .show()
     }
 
-    // ✅ NEW: Success dialog after upload
+    // Success dialog — today = hourly only, previous = hourly + consumption
     private fun showSuccessDialog(uploadResult: UploadResult) {
+        val message: String
+        if (uploadResult.isTodayUpload) {
+            val h = if (uploadResult.upToHour >= 0) String.format("%02d", uploadResult.upToHour) else "--"
+            message = "Hourly data uploaded successfully!\n\n" +
+                    "Date: $selectedDate (Today)\n" +
+                    "Hours saved: 00:00 to " + h + ":59\n" +
+                    "Records: ${uploadResult.hourlyCount}\n\n" +
+                    "Consumption data for today will be\nsubmitted tomorrow."
+        } else {
+            message = "Data uploaded successfully!\n\n" +
+                    "Hourly records: ${uploadResult.hourlyCount}\n" +
+                    "Consumption records: ${uploadResult.consumptionCount}\n" +
+                    "Total: ${uploadResult.hourlyCount + uploadResult.consumptionCount} entries"
+        }
         AlertDialog.Builder(requireContext())
             .setTitle("✅ Upload Successful")
-            .setMessage(
-                """
-                Data uploaded successfully!
-                
-                Hourly Entries: ${uploadResult.hourlyCount} records
-                Consumption Entries: ${uploadResult.consumptionCount} records
-                
-                Total: ${uploadResult.hourlyCount + uploadResult.consumptionCount} entries processed
-                """.trimIndent()
-            )
+            .setMessage(message)
             .setPositiveButton("OK", null)
             .show()
     }

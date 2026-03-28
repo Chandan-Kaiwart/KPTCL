@@ -1,168 +1,194 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView
+<androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#F5F5F5">
 
-    <LinearLayout
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="12dp">
+        android:layout_height="match_parent"
+        android:background="#F5F5F5">
 
-        <!-- ─── HEADER ─────────────────────────────────────── -->
-        <TextView
-            android:id="@+id/tvDashboardTitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text=""
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="#1A237E"
-            android:gravity="center"
-            android:paddingBottom="8dp" />
-
-        <!-- ─── MONTH NAVIGATION ───────────────────────────── -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="4dp">
+            android:orientation="vertical"
+            android:padding="12dp">
 
-            <ImageButton
-                android:id="@+id/btnPrevMonth"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:src="@drawable/ic_arrow_back"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Previous Month" />
-
+            <!-- ─── HEADER ─────────────────────────────────────── -->
             <TextView
-                android:id="@+id/tvMonthYear"
-                android:layout_width="0dp"
+                android:id="@+id/tvDashboardTitle"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
+                android:text=""
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#1A237E"
                 android:gravity="center"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:textColor="#212121" />
+                android:paddingBottom="8dp" />
 
-            <ImageButton
-                android:id="@+id/btnNextMonth"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:src="@drawable/ic_arrow_forward"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Next Month" />
+            <!-- ─── MONTH NAVIGATION ───────────────────────────── -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="4dp">
+
+                <ImageButton
+                    android:id="@+id/btnPrevMonth"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:src="@drawable/ic_arrow_back"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Previous Month" />
+
+                <TextView
+                    android:id="@+id/tvMonthYear"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#212121" />
+
+                <ImageButton
+                    android:id="@+id/btnNextMonth"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:src="@drawable/ic_arrow_forward"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Next Month" />
+            </LinearLayout>
+
+            <!-- ─── WEEKDAY HEADERS ────────────────────────────── -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="2dp">
+
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="Mon" android:gravity="center"
+                    android:textSize="11sp" android:textColor="#546E7A" android:textStyle="bold"/>
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="Tue" android:gravity="center"
+                    android:textSize="11sp" android:textColor="#546E7A" android:textStyle="bold"/>
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="Wed" android:gravity="center"
+                    android:textSize="11sp" android:textColor="#546E7A" android:textStyle="bold"/>
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="Thu" android:gravity="center"
+                    android:textSize="11sp" android:textColor="#546E7A" android:textStyle="bold"/>
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="Fri" android:gravity="center"
+                    android:textSize="11sp" android:textColor="#546E7A" android:textStyle="bold"/>
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="Sat" android:gravity="center"
+                    android:textSize="11sp" android:textColor="#546E7A" android:textStyle="bold"/>
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:text="Sun" android:gravity="center"
+                    android:textSize="11sp" android:textColor="#E53935" android:textStyle="bold"/>
+            </LinearLayout>
+
+            <!-- ─── CALENDAR GRID ─────────────────────────────── -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvCalendar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false" />
+
+            <!-- Loading indicator -->
+            <ProgressBar
+                android:id="@+id/progressBar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:visibility="gone"
+                android:layout_marginTop="8dp" />
+
+            <!-- ─── LEGEND COUNTS ─────────────────────────────── -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp"
+                android:background="#FFFFFF"
+                android:padding="8dp">
+
+                <TextView
+                    android:id="@+id/tvLegendFull"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="✅ Full: 0"
+                    android:textSize="12sp"
+                    android:textColor="#2E7D32"
+                    android:textStyle="bold"
+                    android:gravity="center" />
+
+                <TextView
+                    android:id="@+id/tvLegendPartial"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="⚠️ Partial: 0"
+                    android:textSize="12sp"
+                    android:textColor="#E65100"
+                    android:textStyle="bold"
+                    android:gravity="center" />
+
+                <TextView
+                    android:id="@+id/tvLegendMissing"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="❌ Missing: 0"
+                    android:textSize="12sp"
+                    android:textColor="#C62828"
+                    android:textStyle="bold"
+                    android:gravity="center" />
+            </LinearLayout>
+
+            <!-- ─── DIVIDER ───────────────────────────────────── -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#E0E0E0"
+                android:layout_marginBottom="8dp" />
+
+            <!-- ─── LINE TREND CHART ──────────────────────────── -->
+            <com.apc.kptcl.home.users.dashboard.LineTrendChartView
+                android:id="@+id/lineTrendChart"
+                android:layout_width="match_parent"
+                android:layout_height="280dp"
+                android:background="#FFFFFF"
+                android:layout_marginBottom="80dp" />
+            <!--
+                80dp bottom margin — FAB ke neeche chart
+                overlap na ho isliye extra space diya hai
+            -->
+
         </LinearLayout>
 
-        <!-- ─── WEEKDAY HEADERS ────────────────────────────── -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="2dp">
+    </androidx.core.widget.NestedScrollView>
 
-            <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                android:layout_weight="1" android:text="Mon" android:gravity="center"
-                android:textSize="11sp" android:textColor="#546E7A" android:textStyle="bold"/>
-            <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                android:layout_weight="1" android:text="Tue" android:gravity="center"
-                android:textSize="11sp" android:textColor="#546E7A" android:textStyle="bold"/>
-            <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                android:layout_weight="1" android:text="Wed" android:gravity="center"
-                android:textSize="11sp" android:textColor="#546E7A" android:textStyle="bold"/>
-            <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                android:layout_weight="1" android:text="Thu" android:gravity="center"
-                android:textSize="11sp" android:textColor="#546E7A" android:textStyle="bold"/>
-            <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                android:layout_weight="1" android:text="Fri" android:gravity="center"
-                android:textSize="11sp" android:textColor="#546E7A" android:textStyle="bold"/>
-            <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                android:layout_weight="1" android:text="Sat" android:gravity="center"
-                android:textSize="11sp" android:textColor="#546E7A" android:textStyle="bold"/>
-            <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                android:layout_weight="1" android:text="Sun" android:gravity="center"
-                android:textSize="11sp" android:textColor="#E53935" android:textStyle="bold"/>
-        </LinearLayout>
+    <!-- ─── FLOATING REFRESH BUTTON ──────────────────────── -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabRefresh"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        android:contentDescription="Refresh current month"
+        android:src="@drawable/ic_refresh"
+        app:backgroundTint="#1A237E"
+        app:tint="@android:color/white"
+        app:fabSize="normal"
+        app:elevation="6dp" />
 
-        <!-- ─── CALENDAR GRID ─────────────────────────────── -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvCalendar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:nestedScrollingEnabled="false" />
-
-        <!-- Loading indicator -->
-        <ProgressBar
-            android:id="@+id/progressBar"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:visibility="gone"
-            android:layout_marginTop="8dp" />
-
-        <!-- ─── LEGEND COUNTS ─────────────────────────────── -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="8dp"
-            android:background="#FFFFFF"
-            android:padding="8dp">
-
-            <TextView
-                android:id="@+id/tvLegendFull"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="✅ Full: 0"
-                android:textSize="12sp"
-                android:textColor="#2E7D32"
-                android:textStyle="bold"
-                android:gravity="center" />
-
-            <TextView
-                android:id="@+id/tvLegendPartial"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="⚠️ Partial: 0"
-                android:textSize="12sp"
-                android:textColor="#E65100"
-                android:textStyle="bold"
-                android:gravity="center" />
-
-            <TextView
-                android:id="@+id/tvLegendMissing"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="❌ Missing: 0"
-                android:textSize="12sp"
-                android:textColor="#C62828"
-                android:textStyle="bold"
-                android:gravity="center" />
-        </LinearLayout>
-
-        <!-- ─── DIVIDER ───────────────────────────────────── -->
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#E0E0E0"
-            android:layout_marginBottom="8dp" />
-
-        <!-- ─── LINE TREND CHART ──────────────────────────── -->
-        <com.apc.kptcl.home.users.dashboard.LineTrendChartView
-            android:id="@+id/lineTrendChart"
-            android:layout_width="match_parent"
-            android:layout_height="280dp"
-            android:background="#FFFFFF"
-            android:layout_marginBottom="12dp" />
-
-    </LinearLayout>
-
-</androidx.core.widget.NestedScrollView>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

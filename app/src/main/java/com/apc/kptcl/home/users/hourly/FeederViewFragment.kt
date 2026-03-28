@@ -163,10 +163,10 @@ class FeederViewFragment : Fragment() {
                 Log.e(TAG, "❌ Exception loading feeders", e)
                 binding.btnSearch.isEnabled = false
                 androidx.appcompat.app.AlertDialog.Builder(requireContext())
-    .setTitle("❌ Error")
+                    .setTitle("❌ Error")
                     .setMessage(ApiErrorHandler.handle(e))
-    .setPositiveButton("OK", null)
-    .show()
+                    .setPositiveButton("OK", null)
+                    .show()
             }
         }
     }
@@ -288,19 +288,19 @@ class FeederViewFragment : Fragment() {
                     val error = result.exceptionOrNull()?.message ?: "Unknown error"
                     Log.e(TAG, "❌ Error fetching data: $error")
                     androidx.appcompat.app.AlertDialog.Builder(requireContext())
-    .setTitle("❌ Error")
+                        .setTitle("❌ Error")
                         .setMessage(error ?: "Failed to fetch data. Please try again.")
-    .setPositiveButton("OK", null)
-    .show()
+                        .setPositiveButton("OK", null)
+                        .show()
                 }
 
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Exception fetching data", e)
                 androidx.appcompat.app.AlertDialog.Builder(requireContext())
-    .setTitle("❌ Error")
-    .setMessage(ApiErrorHandler.handle(e))
-    .setPositiveButton("OK", null)
-    .show()
+                    .setTitle("❌ Error")
+                    .setMessage(ApiErrorHandler.handle(e))
+                    .setPositiveButton("OK", null)
+                    .show()
             } finally {
                 binding.btnSearch.isEnabled = true
                 binding.btnSearch.text = "SEARCH"

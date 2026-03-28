@@ -703,9 +703,27 @@ class LoginFragment : Fragment() {
                     binding.btnLogin.isEnabled = true
                     binding.btnLogin.text = "Login"
 
+                    // ✅ FIX: Never expose raw IP/port to user
+                    val userFriendlyMessage = when {
+                        e is java.net.ConnectException ||
+                                e is java.net.UnknownHostException ||
+                                e.message?.contains("ECONNREFUSED", ignoreCase = true) == true ||
+                                e.message?.contains("failed to connect", ignoreCase = true) == true ->
+                            "Unable to connect to server. Please check your internet connection and try again."
+
+                        e is java.net.SocketTimeoutException ||
+                                e.message?.contains("timeout", ignoreCase = true) == true ->
+                            "Connection timed out. Please check your internet connection and try again."
+
+                        e is java.io.IOException ->
+                            "Network error. Please check your internet connection and try again."
+
+                        else ->
+                            "Login failed. Please check your internet connection and try again."
+                    }
                     Snackbar.make(
                         binding.root,
-                        "Error: ${e.message ?: "Network error occurred"}",
+                        userFriendlyMessage,
                         Snackbar.LENGTH_LONG
                     ).show()
                 }

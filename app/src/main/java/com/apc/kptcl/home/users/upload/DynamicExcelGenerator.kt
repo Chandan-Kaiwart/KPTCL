@@ -30,15 +30,13 @@ class DynamicExcelGenerator(private val context: Context) {
         private const val CONSUMPTION_URL = "http://62.72.59.119:9009/api/feeder/consumption" // ✅ FIXED
         private const val TIMEOUT = 15000
         private val PARAMETERS = listOf("IR", "IY", "IB", "MW", "MVAR")
+        // ✅ MUST match VALID_REMARKS in ExcelUploadHandler exactly
         private val REMARK_OPTIONS = listOf(
             "PROPER",
-            "LINE CLEAR",
-            "HAND TRIP",
-            "MAIN SUPPLY FAILURE",
-            "METER FAULTY",
-            "FAULT TRIP(OCR OR EFR)",
-            "BANK IN TRIPPED CONDITION",
-            "TC IN TRIPPED CONDITION"
+            "SHUTDOWN",
+            "BREAKDOWN",
+            "HOLIDAY",
+            "UNDER_MAINTENANCE"
         )
     }
 
@@ -353,7 +351,7 @@ class DynamicExcelGenerator(private val context: Context) {
         feeders: List<FeederInfo>,
         hourlyData: Map<String, Map<String, String>>
     ) {
-        val sheet = workbook.createSheet("FH_$safeDate")
+        val sheet = workbook.createSheet("FH_$date")
 
         val headerRow = sheet.createRow(0)
         val headers = mutableListOf(
@@ -398,7 +396,14 @@ class DynamicExcelGenerator(private val context: Context) {
                 for (hour in 0 until 24) {
                     val hourKey = String.format("%02d", hour)
                     val cellValue = existingData?.get(hourKey) ?: ""
-                    row.createCell(6 + hour).setCellValue(cellValue)
+                    // ✅ ALWAYS create cell — even blank ones must exist so applySheetProtection
+                    // can mark them as unlocked. Otherwise Excel default = locked.
+                    val cell = row.createCell(6 + hour)
+                    if (cellValue.isNotEmpty()) {
+                        val num = cellValue.toDoubleOrNull()
+                        if (num != null) cell.setCellValue(num) else cell.setCellValue(cellValue)
+                    }
+                    // blank cell left empty — will be unlocked by applySheetProtection
                 }
             }
         }
@@ -415,7 +420,7 @@ class DynamicExcelGenerator(private val context: Context) {
         feeders: List<FeederInfo>,
         consumptionData: Map<String, ConsumptionInfo>
     ) {
-        val sheet = workbook.createSheet("FC_$safeDate")
+        val sheet = workbook.createSheet("FC_$date")
 
         val headerRow = sheet.createRow(0)
         val headers = listOf(
@@ -502,26 +507,32 @@ class DynamicExcelGenerator(private val context: Context) {
     }
 
     private fun applySheetProtection(sheet: Sheet, unlockColumnStart: Int) {
-        val workbook = sheet.workbook
+        val workbook = sheet.workbook as XSSFWorkbook
 
-        val lockedStyle = workbook.createCellStyle()
-        lockedStyle.setLocked(true)
+        // Pre-create locked and unlocked versions based on existing styles — preserve formatting
+        val styleCache = mutableMapOf<Int, XSSFCellStyle>()
 
-        val unlockedStyle = workbook.createCellStyle()
-        unlockedStyle.setLocked(false)
+        fun getProtectedStyle(sourceStyle: XSSFCellStyle, locked: Boolean): XSSFCellStyle {
+            val key = (sourceStyle.index.toInt() * 2) + (if (locked) 1 else 0)
+            return styleCache.getOrPut(key) {
+                val newStyle = workbook.createCellStyle() as XSSFCellStyle
+                newStyle.cloneStyleFrom(sourceStyle)
+                newStyle.setLocked(locked)
+                newStyle
+            }
+        }
 
         for (rowNum in 0..sheet.lastRowNum) {
             val row = sheet.getRow(rowNum) ?: continue
+            val shouldLock = (rowNum == 0)
 
             for (cellNum in 0 until row.lastCellNum) {
-                val cell = row.getCell(cellNum) ?: row.createCell(cellNum)
+                val cell = row.getCell(cellNum) ?: continue
+                val isInputCell = (cellNum >= unlockColumnStart) && !shouldLock
+                val locked = !isInputCell
 
-                // ✅ Lock header row (0) and non-input columns (0-5)
-                cell.cellStyle = if (rowNum == 0 || cellNum < unlockColumnStart) {
-                    lockedStyle
-                } else {
-                    unlockedStyle
-                }
+                val currentStyle = cell.cellStyle as? XSSFCellStyle ?: continue
+                cell.cellStyle = getProtectedStyle(currentStyle, locked)
             }
         }
 

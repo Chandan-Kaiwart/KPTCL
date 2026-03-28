@@ -37,7 +37,6 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
-import androidx.navigation.fragment.findNavController
 import com.apc.kptcl.utils.ApiErrorHandler
 
 class FeederHourlyEntryFragment : Fragment() {
@@ -88,7 +87,7 @@ class FeederHourlyEntryFragment : Fragment() {
         setupRecyclerView()
         setupButtons()
         updateDateDisplay()
-        fetchFeederList()
+        fetchFeederList(dateFormat.format(calendar.time))
     }
 
     private fun setupDatePicker() {
@@ -98,6 +97,7 @@ class FeederHourlyEntryFragment : Fragment() {
         }
     }
 
+    // ✅ NAYA
     private fun showDatePicker() {
         val datePickerDialog = DatePickerDialog(
             requireContext(),
@@ -106,20 +106,17 @@ class FeederHourlyEntryFragment : Fragment() {
                 binding.etDate.setText(dateFormat.format(calendar.time))
                 updateDateDisplay()
 
-                // Reload data when date changes
-                if (selectedFeeder != null) {
-                    loadFeederData()
-                }
+                // Date change hone pe feeders bhi reload karo (hourly ya master se)
+                val newDate = dateFormat.format(calendar.time)
+                fetchFeederList(newDate)  // ← date pass karo
             },
             calendar.get(Calendar.YEAR),
             calendar.get(Calendar.MONTH),
             calendar.get(Calendar.DAY_OF_MONTH)
         )
 
-        // Only allow yesterday and before
-        val yesterdayCalendar = Calendar.getInstance()
-        yesterdayCalendar.add(Calendar.DAY_OF_YEAR, -1)
-        datePickerDialog.datePicker.maxDate = yesterdayCalendar.timeInMillis
+        // ✅ Aaj ka din bhi allow karo
+        datePickerDialog.datePicker.maxDate = Calendar.getInstance().timeInMillis
 
         datePickerDialog.show()
     }
@@ -130,32 +127,28 @@ class FeederHourlyEntryFragment : Fragment() {
         binding.tvEntryDate.text = "FOR $selectedDate"
     }
 
-    private fun fetchFeederList() {
+    // ✅ NAYA
+    private fun fetchFeederList(date: String = dateFormat.format(calendar.time)) {
         val token = SessionManager.getToken(requireContext())
-
         if (token.isEmpty()) {
             Snackbar.make(binding.root, "Token missing", Snackbar.LENGTH_LONG).show()
             return
         }
-
-        Log.d(TAG, "📄 Fetching feeders...")
+        Log.d(TAG, "📄 Fetching feeders for date: $date")
         showLoading(true)
-
         lifecycleScope.launch {
             try {
                 val result = withContext(Dispatchers.IO) {
-                    fetchFeedersFromAPI(token)
+                    fetchFeedersFromAPI(token, date)  // ← date pass karo
                 }
-
                 stationName = result.station
                 allFeeders.clear()
                 allFeeders.addAll(result.feeders)
-
-                Log.d(TAG, "✅ Station: $stationName, Feeders: ${allFeeders.size}")
-
+//                Log.d(TAG, "✅ Station: $stationName, Feeders: ${allFeeders.size} (source: ${result.source})")
                 setupFeederDropdown()
+                // Feeders load hone ke baad us date ka data bhi load karo
+                if (allFeeders.isNotEmpty()) loadFeederData()
                 Toast.makeText(context, "Loaded ${allFeeders.size} feeders", Toast.LENGTH_SHORT).show()
-
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Error", e)
                 Snackbar.make(binding.root, ApiErrorHandler.handle(e), Snackbar.LENGTH_LONG).show()
@@ -165,10 +158,9 @@ class FeederHourlyEntryFragment : Fragment() {
         }
     }
 
-    private suspend fun fetchFeedersFromAPI(token: String): FeedersResponse = withContext(Dispatchers.IO) {
-        val url = URL(FEEDER_LIST_URL)
+    private suspend fun fetchFeedersFromAPI(token: String, date: String): FeedersResponse = withContext(Dispatchers.IO) {
+        val url = URL("$FEEDER_LIST_URL?date=$date")  // ← date query param add kiya
         val connection = url.openConnection() as HttpURLConnection
-
         try {
             connection.apply {
                 requestMethod = "GET"
@@ -177,14 +169,11 @@ class FeederHourlyEntryFragment : Fragment() {
                 setRequestProperty("Accept", "application/json")
                 setRequestProperty("Authorization", "Bearer $token")
             }
-
             val responseCode = connection.responseCode
-
             if (responseCode == HttpURLConnection.HTTP_OK) {
                 val response = BufferedReader(InputStreamReader(connection.inputStream)).use { it.readText() }
                 parseFeedersResponse(response)
             } else {
-                // ✅ FIXED: Was "throw Exception("Failed: $responseCode")"
                 val errorMsg = ApiErrorHandler.fromErrorStream(connection.errorStream, responseCode)
                 throw Exception(errorMsg)
             }
@@ -234,7 +223,8 @@ class FeederHourlyEntryFragment : Fragment() {
             }
         }
 
-        return FeedersResponse(station, feeders)
+        val source = jsonObject.optString("source", "MASTER")
+        return FeedersResponse(station, feeders, source)
     }
 
     private fun setupFeederDropdown() {
@@ -450,7 +440,77 @@ class FeederHourlyEntryFragment : Fragment() {
         }
 
         val rows = adapter.getHourlyData()
+        val editableRows = rows.filter { !it.isLocked }
 
+        // ── Validation 1: Every editable row must have at least 1 parameter filled ──
+        val emptyRows = editableRows.filter { row ->
+            parameters.none { param -> !row.parameters[param].isNullOrBlank() }
+        }
+
+        if (emptyRows.isNotEmpty()) {
+            AlertDialog.Builder(requireContext())
+                .setTitle("⚠️ Data Required")
+                .setMessage(
+                    "${emptyRows.size} row(s) are completely empty:\n" +
+                            emptyRows.take(5).joinToString("\n") { "  • Hour ${it.hour.toInt() + 1}:00" } +
+                            (if (emptyRows.size > 5) "\n  • ... and ${emptyRows.size - 5} more" else "") +
+                            "\n\nEach row must have at least one value filled.\n" +
+                            "Empty cells in a row will be auto-filled with 0."
+                )
+                .setPositiveButton("OK", null)
+                .show()
+            return
+        }
+
+        // ── Validation 2: Check for empty cells → show Yes/No autofill dialog ──
+        val hasEmptyCells = editableRows.any { row ->
+            parameters.any { param -> row.parameters[param].isNullOrBlank() }
+        }
+
+        if (hasEmptyCells) {
+            val emptyCount = editableRows.sumOf { row ->
+                parameters.count { param -> row.parameters[param].isNullOrBlank() }
+            }
+
+            AlertDialog.Builder(requireContext())
+                .setTitle("⚠️ Incomplete Data")
+                .setMessage(
+                    "There are $emptyCount empty cells.\n\n" +
+                            "Do you want to auto-fill all empty cells with 0?\n\n" +
+                            "• YES — Empty cells will be filled with 0 in the table.\n" +
+                            "        Review the data, then press Submit again.\n\n" +
+                            "• NO  — Close this dialog and fill manually."
+                )
+                .setPositiveButton("Yes, Autofill with 0") { _, _ ->
+                    // Only fill UI — do NOT submit yet
+                    editableRows.forEach { row ->
+                        parameters.forEach { param ->
+                            if (row.parameters[param].isNullOrBlank()) {
+                                row.parameters[param] = "0"
+                            }
+                        }
+                    }
+                    adapter.notifyDataSetChanged()
+                    Toast.makeText(
+                        requireContext(),
+                        "✅ Empty cells filled with 0. Review and press Submit.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    // Do NOT call doSubmit here — user reviews first
+                }
+                .setNegativeButton("No, Fill Manually") { dialog, _ ->
+                    dialog.dismiss()
+                }
+                .setCancelable(false)
+                .show()
+            return
+        }
+
+        // ── All cells filled → submit directly ──
+        doSubmit(feeder, date, rows)
+    }
+
+    private fun doSubmit(feeder: FeederData, date: String, rows: List<HourlyDataRow>) {
         Log.d(TAG, "💾 Submitting ${rows.size} rows for ${feeder.feederName} (Code: ${feeder.feederCode ?: "NONE"})")
 
         lifecycleScope.launch {
@@ -458,18 +518,61 @@ class FeederHourlyEntryFragment : Fragment() {
                 showLoading(true)
 
                 val result = withContext(Dispatchers.IO) {
-                    // ✅ FIXED: Pass both code and name
                     saveData(date, feeder.feederCode, feeder.feederName, rows)
                 }
 
+                // ✅ NAYA CODE
                 if (result.success) {
+                    showLoading(false)  // pehle loading band karo
                     AlertDialog.Builder(requireContext())
                         .setTitle("✅ Success")
                         .setMessage(result.message)
                         .setPositiveButton("OK") { _, _ ->
-                            findNavController().navigateUp()
+                            loadFeederData()  // OK press pe refresh — ConsumptionEntry jaisa
                         }
+                        .setCancelable(false)   // ← yeh add karo
                         .show()
+                    return@launch  // finally mein dobara showLoading(false) na chale
+
+                } else if (result.allowAutofill) {
+                    // Server detected incomplete data (fallback if Android check was bypassed)
+                    showLoading(false)
+                    val editableRows = rows.filter { !it.isLocked }
+                    val emptyCount = editableRows.sumOf { row ->
+                        parameters.count { param -> row.parameters[param].isNullOrBlank() }
+                    }
+                    AlertDialog.Builder(requireContext())
+                        .setTitle("⚠️ Incomplete Data")
+                        .setMessage(
+                            "There are $emptyCount empty cells.\n\n" +
+                                    "Do you want to auto-fill all empty cells with 0?\n\n" +
+                                    "• YES — Empty cells will be filled with 0 in the table.\n" +
+                                    "        Review the data, then press Submit again.\n\n" +
+                                    "• NO  — Close this dialog and fill manually."
+                        )
+                        .setPositiveButton("Yes, Autofill with 0") { _, _ ->
+                            // Only fill UI — do NOT submit yet
+                            editableRows.forEach { row ->
+                                parameters.forEach { param ->
+                                    if (row.parameters[param].isNullOrBlank()) {
+                                        row.parameters[param] = "0"
+                                    }
+                                }
+                            }
+                            adapter.notifyDataSetChanged()
+                            Toast.makeText(
+                                requireContext(),
+                                "✅ Empty cells filled with 0. Review and press Submit.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            // Do NOT auto-submit — user reviews first
+                        }
+                        .setNegativeButton("No, Fill Manually") { dialog, _ ->
+                            dialog.dismiss()
+                        }
+                        .setCancelable(false)
+                        .show()
+
                 } else {
                     showError(result.message)
                 }
@@ -510,9 +613,8 @@ class FeederHourlyEntryFragment : Fragment() {
                 val hoursObject = JSONObject()
                 for (row in rows.filter { !it.isLocked }) {
                     val value = row.parameters[parameter] ?: ""
-                    if (value.isNotEmpty() && value != "null") {
-                        hoursObject.put(row.hour, value)
-                    }
+                    // Send ALL hours — empty string means missing, server will detect it
+                    hoursObject.put(row.hour, if (value == "null") "" else value)
                 }
                 rowsArray.put(JSONObject().apply {
                     put("date", date)
@@ -539,8 +641,14 @@ class FeederHourlyEntryFragment : Fragment() {
                     jsonResponse.optBoolean("success", false),
                     jsonResponse.optString("message", "")
                 )
+            } else if (responseCode == 400) {
+                // Could be allow_autofill warning from server — parse error stream as JSON
+                val errorBody = BufferedReader(InputStreamReader(connection.errorStream)).use { it.readText() }
+                val jsonError = runCatching { JSONObject(errorBody) }.getOrNull()
+                val allowAutofill = jsonError?.optBoolean("allow_autofill", false) ?: false
+                val msg = jsonError?.optString("message", "Incomplete data") ?: "Incomplete data"
+                SaveResult(false, msg, allowAutofill)
             } else {
-                // ✅ FIXED: Was "Server error: $responseCode - $errorMessage" (leaked raw JSON + code)
                 val errorMsg = ApiErrorHandler.fromErrorStream(connection.errorStream, responseCode)
                 SaveResult(false, errorMsg)
             }
@@ -586,7 +694,8 @@ class FeederHourlyEntryFragment : Fragment() {
 
 data class FeedersResponse(
     val station: String,
-    val feeders: List<FeederData>
+    val feeders: List<FeederData>,
+    val source: String = "MASTER"
 )
 
 // ✅ FIXED: Made feederCode nullable
@@ -609,7 +718,8 @@ data class ExistingHourlyData(
 
 data class SaveResult(
     val success: Boolean,
-    val message: String
+    val message: String,
+    val allowAutofill: Boolean = false
 )
 
 // ============================================
@@ -712,10 +822,13 @@ class HourlyDataAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
                 tvHour.setTextColor(Color.parseColor("#AAAAAA"))
                 tvHour.setBackgroundColor(Color.parseColor("#E8E8E8"))
 
-                listOf(etIR, etIY, etIB, etMW, etMVAR).forEach { et ->
+                val paramHints = listOf(
+                    etIR to "IR", etIY to "IY", etIB to "IB", etMW to "MW", etMVAR to "MVAR"
+                )
+                paramHints.forEach { (et, param) ->
                     (et.tag as? TextWatcher)?.let { et.removeTextChangedListener(it) }
                     et.setText("")
-                    et.hint = "—"
+                    et.hint = param          // ← shows IR, IY, IB, MW, MVAR
                     et.isEnabled = false
                     et.isFocusable = false
                     et.setBackgroundColor(Color.parseColor("#E8E8E8"))
@@ -745,6 +858,14 @@ class HourlyDataAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
             }
         }
 
+        private fun updateCellColor(editText: EditText) {
+            if (editText.text.isNullOrBlank()) {
+                editText.setBackgroundColor(Color.parseColor("#FFCCCC")) // red for empty
+            } else {
+                editText.setBackgroundResource(R.drawable.table_cell_border_editable) // normal for filled
+            }
+        }
+
         private fun setupParameterInput(editText: EditText, parameterName: String) {
             // Old watcher hata do pehle
             (editText.tag as? TextWatcher)?.let { editText.removeTextChangedListener(it) }
@@ -771,10 +892,14 @@ class HourlyDataAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
             // Existing value set karo (hint XML se aata hai, override mat karo)
             editText.setText(currentRow.parameters[parameterName] ?: "")
 
-            // TextWatcher — data capture
+            // Set initial color based on whether cell is empty or filled
+            updateCellColor(editText)
+
+            // TextWatcher — data capture + live color update
             val watcher = object : TextWatcher {
                 override fun afterTextChanged(s: Editable?) {
                     currentRow.parameters[parameterName] = s.toString()
+                    updateCellColor(editText)
                 }
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -807,6 +932,9 @@ class IntegerInputFilter(private val allowNegative: Boolean) : InputFilter {
 
         if (newText.isEmpty()) return null
         if (newText == "-" && allowNegative) return null
+
+        val digits = newText.replace("-", "")
+        if (digits.length > 5) return ""
 
         return try {
             newText.toInt()
@@ -844,6 +972,13 @@ class DecimalInputFilter(
             val parts = newText.split(".")
             if (parts.size > 2) return ""
             if (parts.size == 2 && parts[1].length > maxDecimalPlaces) return ""
+            // Add this:
+            val intPart = parts[0].replace("-", "")
+            if (intPart.length > 5) return ""   // ← blocks integer part beyond 5 digits
+        } else {
+            // No decimal point yet — check raw digit count
+            val intPart = newText.replace("-", "")
+            if (intPart.length > 5) return ""   // ← blocks 6th digit when typing integer
         }
 
         return try {

@@ -96,9 +96,12 @@ class ConsumptionEntryFragment : Fragment() {
     }
 
     private fun setupDatePicker() {
+        // ✅ Point 6 FIX: Default date = yesterday (today blocked for consumption entry)
+        calendar.add(Calendar.DAY_OF_YEAR, -1)
         binding.etDate.setText(dateFormat.format(calendar.time))
+
         binding.etDate.setOnClickListener {
-            DatePickerDialog(
+            val dialog = DatePickerDialog(
                 requireContext(),
                 { _, year, month, day ->
                     calendar.set(year, month, day)
@@ -114,7 +117,13 @@ class ConsumptionEntryFragment : Fragment() {
                 calendar.get(Calendar.YEAR),
                 calendar.get(Calendar.MONTH),
                 calendar.get(Calendar.DAY_OF_MONTH)
-            ).show()
+            )
+
+            // ✅ Point 6 FIX: Block today and future — consumption can only be entered for yesterday or earlier
+            val yesterday = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }
+            dialog.datePicker.maxDate = yesterday.timeInMillis
+
+            dialog.show()
         }
     }
 
@@ -160,9 +169,9 @@ class ConsumptionEntryFragment : Fragment() {
         val supply3ph = data.supply3ph?.trim() ?: ""
         val supply1ph = data.supply1ph?.trim() ?: ""
 
-        // ✅ Skip ONLY if both are truly empty
+        // Point 6: If both are empty, they will default to "00:00" — this is always valid
         if (supply3ph.isEmpty() && supply1ph.isEmpty()) {
-            return null // No error - both empty is allowed
+            return null // No error — defaults to 00:00 on submit
         }
 
         // ✅ Validate 3PH format and value if not empty
@@ -769,23 +778,21 @@ class ConsumptionEntryFragment : Fragment() {
 
                     put("feeder_category", item.feederCategory ?: JSONObject.NULL)
 
-                    if (item.remark.isNullOrBlank()) {
-                        put("remark", JSONObject.NULL)
-                    } else {
-                        put("remark", item.remark)
-                    }
+                    // ✅ Point 7 FIX: null/blank remark defaults to "PROPER", never send null
+                    val remarkValue = if (item.remark.isNullOrBlank()) "PROPER" else item.remark
+                    put("remark", remarkValue)
 
                     put("total_consumption", item.totalConsumption ?: JSONObject.NULL)
 
-                    // ✅ CRITICAL FIX: Send null for empty supply times
+                    // Point 6: Send "00:00" as default when supply times are empty (not null)
                     if (item.supply3ph.isNullOrBlank()) {
-                        put("supply_3ph", JSONObject.NULL)
+                        put("supply_3ph", "00:00")
                     } else {
                         put("supply_3ph", item.supply3ph)
                     }
 
                     if (item.supply1ph.isNullOrBlank()) {
-                        put("supply_1ph", JSONObject.NULL)
+                        put("supply_1ph", "00:00")
                     } else {
                         put("supply_1ph", item.supply1ph)
                     }
@@ -1025,6 +1032,14 @@ class EntryConsumptionDataAdapter(
             })
         }
 
+        private fun updateCellColor(editText: EditText) {
+            if (editText.text.isNullOrBlank()) {
+                editText.setBackgroundColor(android.graphics.Color.parseColor("#FFCCCC")) // red when empty
+            } else {
+                editText.setBackgroundResource(R.drawable.table_cell_border_editable) // normal when filled
+            }
+        }
+
         fun bind(data: EntryConsumptionData, date: String, station: String) {
             // ✅ FIXED: Display category or empty string (not "null")
             tvCategory.text = data.feederCategory ?: ""
@@ -1033,22 +1048,39 @@ class EntryConsumptionDataAdapter(
             etRemark.setText(if (data.remark.isNullOrBlank()) "" else data.remark)
             etTotal.setText(if (data.totalConsumption == null) "" else data.totalConsumption.toString())
 
-            // ✅ Set time values from data - show empty string for null
+            // Point 6: Set hint for total consumption
+            etTotal.hint = "Enter or leave 0"
+
+            // Point 6: Set 3PH/1PH values or show autofill hint when empty
             etSupply3ph.setText(if (data.supply3ph.isNullOrBlank()) "" else data.supply3ph)
             etSupply1ph.setText(if (data.supply1ph.isNullOrBlank()) "" else data.supply1ph)
 
+            // Point 6: Autofill hint — shown when field is empty
+            etSupply3ph.hint = "Autofill 00:00 or enter manually"
+            etSupply1ph.hint = "Autofill 00:00 or enter manually"
+
+            // Set initial background colors based on empty/filled state
+            updateCellColor(etTotal)
+            updateCellColor(etSupply3ph)
+            updateCellColor(etSupply1ph)
+
             // Text watchers
             setupTextWatcher(etRemark) { data.remark = it.ifBlank { null } }
-            setupTextWatcher(etTotal) { data.totalConsumption = it.toDoubleOrNull() }
+            setupTextWatcher(etTotal) {
+                data.totalConsumption = it.toDoubleOrNull()
+                updateCellColor(etTotal)
+            }
 
             // Time validation watchers with 24-hour total check
             setupTimeWatcher(etSupply3ph, etSupply1ph) { time3ph ->
                 data.supply3ph = time3ph.ifBlank { null }
+                updateCellColor(etSupply3ph)
                 Log.d("ConsumptionEntry", "⏰ 3PH time = $time3ph")
             }
 
             setupTimeWatcher(etSupply1ph, etSupply3ph) { time1ph ->
                 data.supply1ph = time1ph.ifBlank { null }
+                updateCellColor(etSupply1ph)
                 Log.d("ConsumptionEntry", "⏰ 1PH time = $time1ph")
             }
         }
@@ -1142,8 +1174,8 @@ class EntryConsumptionDataAdapter(
                         val current3ph = if (currentField.id == etSupply3ph.id) timeStr else otherTimeStr
                         val current1ph = if (currentField.id == etSupply1ph.id) timeStr else otherTimeStr
 
-                        currentField.error = "Total > 24:00 ho gaya!"
-                        otherField.error = "Total > 24:00 ho gaya!"
+                        currentField.error = "Total > 24:00 exceeds!"
+                        otherField.error = "Total > 24:00 exceeds!"
                         onTimeChanged(timeStr)  // ✅ FIX: value preserve karo, error flag block karega submit
 
                         // ✅ SET error flag for current field
