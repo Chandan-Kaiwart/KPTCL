@@ -55,9 +55,9 @@ class StationTicketFragment : Fragment() {
 
     companion object {
         private const val TAG = "StationTicket"
-        private const val TICKET_API_URL = "http://62.72.59.119:9009/api/ticket/create"
-        private const val FEEDER_LIST_URL = "http://62.72.59.119:9009/api/feeder/list"
-        private const val CATEGORY_API_URL = "http://62.72.59.119:9009/api/feeder/categories"
+        private const val TICKET_API_URL = "http://31.97.237.169:9009/api/ticket/create"
+        private const val FEEDER_LIST_URL = "http://31.97.237.169:9009/api/feeder/list"
+        private const val CATEGORY_API_URL = "http://31.97.237.169:9009/api/feeder/categories"
         private const val TIMEOUT = 15000
     }
 

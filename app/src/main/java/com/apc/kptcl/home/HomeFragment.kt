@@ -49,9 +49,9 @@ class HomeFragment : Fragment() {
 
     companion object {
         private const val TAG = "HomeFragment"
-        private const val VIEW_TICKETS_API = "http://62.72.59.119:9009/api/feeder/ticket/view/all"
-        private const val APPROVE_API = "http://62.72.59.119:9009/api/dcc/ticket/approve"
-        private const val REJECT_API = "http://62.72.59.119:9009/api/dcc/ticket/reject"
+        private const val VIEW_TICKETS_API = "http://31.97.237.169:9009/api/feeder/ticket/view/all"
+        private const val APPROVE_API = "http://31.97.237.169:9009/api/dcc/ticket/approve"
+        private const val REJECT_API = "http://31.97.237.169:9009/api/dcc/ticket/reject"
         private const val TIMEOUT = 15000
     }
 
@@ -108,6 +108,11 @@ class HomeFragment : Fragment() {
             })
     }
 
+// ═══════════════════════════════════════════════════════════════════════
+// HomeFragment.kt — REPLACE setupDCCFeatures() with this version
+// Also add import at top: import androidx.navigation.navOptions
+// ═══════════════════════════════════════════════════════════════════════
+
     private fun setupDCCFeatures() {
         try {
             val token = SessionManager.getToken(requireContext())
@@ -130,26 +135,51 @@ class HomeFragment : Fragment() {
                 return
             }
 
-            isDCCUser = payload.role.lowercase() == "dcc"
+            val role = payload.role.lowercase()
+            isDCCUser = role == "dcc"
 
-            if (isDCCUser) {
-                Log.d(TAG, "✅ DCC user detected - Showing tickets")
-                showDCCSection()
-                hideStationUserFeatures()
-                setupTicketRecyclerView()
-                setupFilters()
-                setupDCCReportsButton()
-                loadDCCTickets()
-                disableDrawerForDCC()
-            } else {
-                Log.d(TAG, "ℹ️ Non-DCC user - Hiding DCC section")
-                hideDCCSection()
-                showStationUserFeatures()
-                enableDrawerForStationUsers()
+            when (role) {
+
+                "dcc" -> {
+                    Log.d(TAG, "✅ DCC user — showing DCC dashboard")
+                    showDCCSection()
+                    hideStationUserFeatures()
+                    setupTicketRecyclerView()
+                    setupFilters()
+                    setupDCCReportsButton()
+                    loadDCCTickets()
+                    disableDrawerForDCC()
+                }
+
+                "division" -> {
+                    Log.d(TAG, "🏛️ Division user — redirecting to DivisionHomeFragment")
+                    try {
+                        findNavController().navigate(
+                            R.id.action_homeFragment_to_divisionHomeFragment,
+                            null,
+                            navOptions {
+                                popUpTo(R.id.homeFragment) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        )
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error navigating to DivisionHomeFragment", e)
+                        hideDCCSection()
+                        showStationUserFeatures()
+                        disableDrawerForDCC()
+                    }
+                }
+
+                else -> {
+                    Log.d(TAG, "ℹ️ Station user — showing station dashboard")
+                    hideDCCSection()
+                    showStationUserFeatures()
+                    enableDrawerForStationUsers()
+                }
             }
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error setting up DCC features", e)
+            Log.e(TAG, "Error in setupDCCFeatures", e)
             hideDCCSection()
             showStationUserFeatures()
             enableDrawerForStationUsers()
@@ -262,27 +292,13 @@ class HomeFragment : Fragment() {
     }
 
     private fun disableDrawerForDCC() {
-        (requireActivity() as? MainActivity)?.apply {
-            try {
-                val method = MainActivity::class.java.getMethod("setDrawerEnabled", Boolean::class.java)
-                method.invoke(this, false)
-                Log.d(TAG, "🔒 Drawer disabled for DCC user")
-            } catch (e: Exception) {
-                Log.w(TAG, "MainActivity doesn't have setDrawerEnabled method")
-            }
-        }
+        (requireActivity() as? MainActivity)?.lockDrawer()
+        Log.d(TAG, "🔒 Drawer disabled for DCC/Division user")
     }
 
     private fun enableDrawerForStationUsers() {
-        (requireActivity() as? MainActivity)?.apply {
-            try {
-                val method = MainActivity::class.java.getMethod("setDrawerEnabled", Boolean::class.java)
-                method.invoke(this, true)
-                Log.d(TAG, "🔓 Drawer enabled for station user")
-            } catch (e: Exception) {
-                Log.w(TAG, "MainActivity doesn't have setDrawerEnabled method")
-            }
-        }
+        (requireActivity() as? MainActivity)?.unlockDrawer()
+        Log.d(TAG, "🔓 Drawer enabled for station user")
     }
 
     private fun showDCCSection() {

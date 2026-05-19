@@ -7,6 +7,46 @@
     app:startDestination="@id/loginFragment">
 
     <fragment
+        android:id="@+id/divisionHomeFragment"
+        android:name="com.apc.kptcl.home.users.division.DivisionHomeFragment"
+        android:label="Division Dashboard"
+        tools:layout="@layout/fragment_division_home">
+
+
+        <action
+            android:id="@+id/action_divisionHomeFragment_to_reportFragment"
+            app:destination="@id/reportFragment" />
+
+        <action
+            android:id="@+id/action_divisionHomeFragment_to_divisionTicketViewFragment"
+            app:destination="@id/divisionTicketViewFragment" />
+
+        <action
+            android:id="@+id/action_divisionHomeFragment_to_divisionHourlyViewFragment"
+            app:destination="@id/divisionHourlyViewFragment" />
+
+        <action
+            android:id="@+id/action_divisionHomeFragment_to_divisionDailyViewFragment"
+            app:destination="@id/divisionDailyViewFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/divisionTicketViewFragment"
+        android:name="com.apc.kptcl.home.users.division.DivisionTicketViewFragment"
+        tools:layout="@layout/fragment_division_ticket_view"
+        />
+    <fragment
+        android:id="@+id/divisionHourlyViewFragment"
+        android:name="com.apc.kptcl.home.users.division.DivisionHourlyViewFragment"
+        tools:layout="@layout/fragment_division_hourly_view"
+        />
+    <fragment
+        android:id="@+id/divisionDailyViewFragment"
+        android:name="com.apc.kptcl.home.users.division.DivisionDailyViewFragment"
+        tools:layout="@layout/fragment_division_daily_view"
+        />
+
+    <fragment
         android:id="@+id/feederstatusFragment"
         android:name="com.apc.kptcl.home.users.dashboard.FeederStatusDashboardFragment"
         android:label="📊 Feeder Status Dashboard"
@@ -102,6 +142,11 @@
         android:name="com.apc.kptcl.home.HomeFragment"
         android:label="Home"
         tools:layout="@layout/fragment_home">
+
+        <action
+            android:id="@+id/action_homeFragment_to_divisionHomeFragment"
+            app:destination="@id/divisionHomeFragment"
+            app:launchSingleTop="true" />
 
         <action
             android:id="@+id/action_homeFragment_to_CreateTicketFragment"

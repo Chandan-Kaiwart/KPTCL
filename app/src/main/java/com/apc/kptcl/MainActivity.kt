@@ -114,7 +114,11 @@ class MainActivity : AppCompatActivity() {
                 R.id.excelDownload,
                 R.id.reportFragment,
                 R.id.feederConfirmation,
-                R.id.editMissingDataFragment
+                R.id.editMissingDataFragment,
+                R.id.divisionHomeFragment,
+                R.id.divisionTicketViewFragment,
+                R.id.divisionHourlyViewFragment,
+                R.id.divisionDailyViewFragment,
             ),
             binding.drawerLayout
         )
@@ -300,9 +304,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ❌ Removed showLogoutConfirmation() - Now in HomeFragment
-    // ❌ Removed performLogout() - Now in HomeFragment
-
     private fun setupBackPressHandler() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -317,6 +318,16 @@ class MainActivity : AppCompatActivity() {
                     navController.currentDestination?.id == R.id.loginFragment -> {
                         // If on login screen, exit app
                         finish()
+                    }
+                    navController.currentDestination?.id == R.id.divisionHomeFragment -> {
+                        showExitConfirmation()
+                    }
+
+                    navController.currentDestination?.id == R.id.divisionTicketViewFragment ||
+                            navController.currentDestination?.id == R.id.divisionHourlyViewFragment ||
+                            navController.currentDestination?.id == R.id.divisionDailyViewFragment -> {
+                        navController.navigate(R.id.divisionHomeFragment, null,
+                            navOptions { popUpTo(R.id.divisionHomeFragment) { inclusive = true } })
                     }
                     else -> {
                         when (navController.currentDestination?.id) {
@@ -365,20 +376,42 @@ class MainActivity : AppCompatActivity() {
                         androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_LOCKED_CLOSED
                     )
                 }
+                R.id.divisionHomeFragment -> {
+                    binding.toolbar.visibility = View.GONE
+                    binding.drawerLayout.setDrawerLockMode(
+                        androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_LOCKED_CLOSED
+                    )
+                    updateNavigationHeader()
+                }
+                R.id.divisionTicketViewFragment,
+                R.id.divisionHourlyViewFragment,
+                R.id.reportFragment,
+                R.id.divisionDailyViewFragment -> {
+                    binding.toolbar.visibility = View.GONE
+                    binding.drawerLayout.setDrawerLockMode(
+                        androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_LOCKED_CLOSED
+                    )
+                    updateNavigationHeader()
+                }
                 else -> {
                     // Show toolbar for all other screens
                     binding.toolbar.visibility = View.VISIBLE
 
-                    // ✅ Check if DCC user - don't unlock drawer automatically
-                    // Let HomeFragment handle drawer state for DCC users
-                    if (!isDCCUserLoggedIn()) {
+                    // ✅ Role check karke drawer control karo
+                    val role = try {
+                        val token = SessionManager.getToken(this)
+                        if (token.isEmpty()) "station"
+                        else com.apc.kptcl.utils.JWTUtils.decodeToken(token)?.role?.lowercase() ?: "station"
+                    } catch (e: Exception) { "station" }
+
+                    if (role != "dcc" && role != "division") {
+                        // Station user — drawer unlock karo
                         binding.drawerLayout.setDrawerLockMode(
                             androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_UNLOCKED
                         )
-
-                        // Reapply hamburger icon customization
                         customizeHamburgerIcon()
                     }
+                    // DCC/Division ke liye locked rahega — HomeFragment/DivisionHomeFragment handle karega
 
                     // Update header whenever we navigate to a screen with drawer visible
                     updateNavigationHeader()

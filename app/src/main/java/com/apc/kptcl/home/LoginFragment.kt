@@ -33,6 +33,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.apc.kptcl.R
 import com.apc.kptcl.databinding.FragmentLoginBinding
+import com.apc.kptcl.utils.AppUpdateManager
 import com.apc.kptcl.utils.SessionManager
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.Dispatchers
@@ -59,6 +60,9 @@ class LoginFragment : Fragment() {
     private var downloadId: Long = -1
     private var downloadReceiver: BroadcastReceiver? = null
 
+    // Auto-update manager
+    private var appUpdateManager: AppUpdateManager? = null
+
     // Download progress dialog components
     private var progressDialog: AlertDialog? = null
     private var progressBar: ProgressBar? = null
@@ -76,7 +80,7 @@ class LoginFragment : Fragment() {
 
     companion object {
         private const val TAG = "LoginFragment"
-        private const val BASE_URL = "http://62.72.59.119:9009"
+        private const val BASE_URL = "http://31.97.237.169:9009"
         private const val APK_DOWNLOAD_URL = "https://api.vidyut-suvidha.in/apk"
         private const val APK_FILE_NAME = "KPTCL_App_Latest.apk"
     }
@@ -123,6 +127,7 @@ class LoginFragment : Fragment() {
         setupClickListeners()
         checkExistingSession()
         setupDownloadReceiver()
+        autoCheckForUpdate()  // ✅ Auto-check on login screen open
     }
 
     private fun checkExistingSession() {
@@ -464,9 +469,11 @@ class LoginFragment : Fragment() {
                 Context.RECEIVER_NOT_EXPORTED
             )
         } else {
-            requireContext().registerReceiver(
+            ContextCompat.registerReceiver(
+                requireContext(),
                 downloadReceiver,
-                IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
+                IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
+                ContextCompat.RECEIVER_NOT_EXPORTED
             )
         }
     }
@@ -530,6 +537,77 @@ class LoginFragment : Fragment() {
                 Toast.LENGTH_LONG
             ).show()
         }
+    }
+
+    // ✅ Auto-check for update when login screen opens (silently in background)
+    private fun autoCheckForUpdate() {
+        appUpdateManager = AppUpdateManager(requireContext())
+
+        lifecycleScope.launch {
+            try {
+                Log.d(TAG, "🔍 Auto-checking for APK update...")
+                appUpdateManager?.checkForUpdates(object : AppUpdateManager.UpdateCheckCallback {
+
+                    override fun onUpdateAvailable(updateInfo: AppUpdateManager.UpdateInfo) {
+                        Log.d(TAG, "🆕 Update available! Showing auto-update dialog")
+                        showAutoUpdateDialog(updateInfo)
+                    }
+
+                    override fun onUpdateNotAvailable() {
+                        Log.d(TAG, "✅ App is up to date, no update needed")
+                        // Silent — don't show any toast/dialog to user
+                    }
+
+                    override fun onCheckError(error: String) {
+                        Log.w(TAG, "⚠️ Update check failed (silent): $error")
+                        // Silent — network issue pe user ko disturb mat karo
+                    }
+
+                    override fun onDownloadProgress(progress: Int) {
+                        progressBar?.progress = progress
+                        tvDownloadProgress?.text = "$progress%"
+                    }
+
+                    override fun onDownloadComplete() {
+                        Log.d(TAG, "✅ Auto-update download complete")
+                        dismissProgressDialog()
+                        resetDownloadButton()
+                    }
+
+                    override fun onDownloadFailed(error: String) {
+                        Log.e(TAG, "❌ Auto-update download failed: $error")
+                        dismissProgressDialog()
+                        resetDownloadButton()
+                        Toast.makeText(context, "Update download failed: $error", Toast.LENGTH_LONG).show()
+                    }
+                })
+            } catch (e: Exception) {
+                Log.e(TAG, "Exception in autoCheckForUpdate: ${e.message}", e)
+            }
+        }
+    }
+
+    // ✅ Show update dialog automatically (user still has choice to update or skip)
+    private fun showAutoUpdateDialog(updateInfo: AppUpdateManager.UpdateInfo) {
+        if (!isAdded || context == null) return
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("🆕 App Update Available")
+            .setMessage(
+                "A new version of KPTCL App is available.\n\n" +
+                        "📅 Update uploaded: ${updateInfo.apkLastModifiedDate}\n\n" +
+                        "Please update to the latest version for best experience."
+            )
+            .setCancelable(false)
+            .setPositiveButton("Update Now") { _, _ ->
+                Log.d(TAG, "User accepted auto-update")
+                checkPermissionsAndDownload()
+            }
+            .setNegativeButton("Later") { dialog, _ ->
+                Log.d(TAG, "User skipped auto-update")
+                dialog.dismiss()
+            }
+            .show()
     }
 
     private fun togglePasswordVisibility() {
@@ -763,8 +841,9 @@ class LoginFragment : Fragment() {
                 dbName = dbName,
                 escom = escom,
                 token = token,
-                serverUrl = BASE_URL
-            )
+                serverUrl = BASE_URL,
+
+                )
 
             Log.d(TAG, "Login successful - Token saved, navigating to welcome")
 
@@ -802,6 +881,10 @@ class LoginFragment : Fragment() {
 
         // Dismiss progress dialog if showing
         dismissProgressDialog()
+
+        // ✅ Cleanup AppUpdateManager
+        appUpdateManager?.cleanup()
+        appUpdateManager = null
 
         // ✅ Unregister download receiver
         try {

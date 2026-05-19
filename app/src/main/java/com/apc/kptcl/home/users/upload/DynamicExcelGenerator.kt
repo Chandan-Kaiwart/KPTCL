@@ -26,8 +26,8 @@ class DynamicExcelGenerator(private val context: Context) {
 
     companion object {
         private const val TAG = "DynamicExcelGen"
-        private const val FEEDER_LIST_URL = "http://62.72.59.119:9009/api/feeder/list"
-        private const val CONSUMPTION_URL = "http://62.72.59.119:9009/api/feeder/consumption" // ✅ FIXED
+        private const val FEEDER_LIST_URL = "http://31.97.237.169:9009/api/feeder/list"
+        private const val CONSUMPTION_URL = "http://31.97.237.169:9009/api/feeder/consumption" // ✅ FIXED
         private const val TIMEOUT = 15000
         private val PARAMETERS = listOf("IR", "IY", "IB", "MW", "MVAR")
         // ✅ MUST match VALID_REMARKS in ExcelUploadHandler exactly
@@ -467,7 +467,7 @@ class DynamicExcelGenerator(private val context: Context) {
 
     private fun setColumnWidths(sheet: Sheet) {
         sheet.setColumnWidth(0, 3000)   // DATE
-        sheet.setColumnWidth(1, 9009)   // STATION_NAME
+        sheet.setColumnWidth(1, 9001)   // STATION_NAME
         sheet.setColumnWidth(2, 6000)   // FEEDER_NAME
         sheet.setColumnWidth(3, 4000)   // FEEDER_CODE
         sheet.setColumnWidth(4, 5000)   // FEEDER_CATEGORY
@@ -481,11 +481,11 @@ class DynamicExcelGenerator(private val context: Context) {
 
     private fun setConsumptionColumnWidths(sheet: Sheet) {
         sheet.setColumnWidth(0, 3000)   // DATE
-        sheet.setColumnWidth(1, 9009)   // STATION_NAME
+        sheet.setColumnWidth(1, 9001)   // STATION_NAME
         sheet.setColumnWidth(2, 6000)   // FEEDER_NAME
         sheet.setColumnWidth(3, 4000)   // FEEDER_CODE
         sheet.setColumnWidth(4, 5000)   // FEEDER_CATEGORY
-        sheet.setColumnWidth(5, 9009)   // REMARK
+        sheet.setColumnWidth(5, 9001)   // REMARK
         sheet.setColumnWidth(6, 5000)   // TOTAL_CONSUMPTION
         sheet.setColumnWidth(7, 3500)   // SUPPLY_3PH
         sheet.setColumnWidth(8, 3500)   // SUPPLY_1PH

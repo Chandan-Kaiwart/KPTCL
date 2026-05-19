@@ -86,7 +86,7 @@ class FeederStatusDashboardFragment : Fragment() {
 
     companion object {
         private const val TAG = "FeederDashboard"
-        private const val BASE_URL = "http://62.72.59.119:9009"
+        private const val BASE_URL = "http://31.97.237.169:9009"
         private const val TIMEOUT = 15000
     }
 

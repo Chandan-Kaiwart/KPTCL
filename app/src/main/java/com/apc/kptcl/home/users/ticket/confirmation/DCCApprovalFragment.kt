@@ -31,9 +31,9 @@ class DCCApprovalFragment : Fragment() {
 
     companion object {
         private const val TAG = "DCCApproval"
-        private const val VIEW_TICKETS_API = "http://62.72.59.119:9009/api/feeder/ticket/view"
-        private const val APPROVE_API = "http://62.72.59.119:9009/api/dcc/ticket/approve"
-        private const val REJECT_API = "http://62.72.59.119:9009/api/dcc/ticket/reject"
+        private const val VIEW_TICKETS_API = "http://31.97.237.169:9009/api/feeder/ticket/view"
+        private const val APPROVE_API = "http://31.97.237.169:9009/api/dcc/ticket/approve"
+        private const val REJECT_API = "http://31.97.237.169:9009/api/dcc/ticket/reject"
         private const val TIMEOUT = 15000
     }
 

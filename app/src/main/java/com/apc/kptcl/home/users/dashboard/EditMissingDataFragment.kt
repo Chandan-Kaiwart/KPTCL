@@ -110,7 +110,7 @@ class EditMissingDataFragment : Fragment() {
 
     companion object {
         private const val TAG = "EditMissing"
-        private const val BASE_URL = "http://62.72.59.119:9009"
+        private const val BASE_URL = "http://31.97.237.169:9009"
         private const val TIMEOUT = 15000
         private val PARAMETERS = listOf("IB", "IR", "IY", "MW", "MVAR")
         private val HOURS = (0..23).map { String.format("%02d", it) }

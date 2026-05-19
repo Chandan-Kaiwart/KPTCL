@@ -16,9 +16,9 @@ class ExcelUploadHandler(private val context: Context) {
 
     companion object {
         private const val TAG = "ExcelUpload"
-        private const val HOURLY_SAVE_URL = "http://62.72.59.119:9009/api/feeder/hourly-entry/save"
-        private const val CONSUMPTION_SAVE_URL = "http://62.72.59.119:9009/api/feeder/consumption/save"
-        private const val FEEDER_LIST_URL = "http://62.72.59.119:9009/api/feeder/list"
+        private const val HOURLY_SAVE_URL = "http://31.97.237.169:9009/api/feeder/hourly-entry/save"
+        private const val CONSUMPTION_SAVE_URL = "http://31.97.237.169:9009/api/feeder/consumption/save"
+        private const val FEEDER_LIST_URL = "http://31.97.237.169:9009/api/feeder/list"
         private const val TIMEOUT = 15000
 
         private val HOURLY_HEADERS = listOf(
